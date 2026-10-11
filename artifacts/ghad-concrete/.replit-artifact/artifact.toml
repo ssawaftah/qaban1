@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/ghad-concrete/"
+title = "الغد للباطون الجاهز"
+description = "نظام عربي متجاوب لإدارة وزن الخلاطات وحساب كميات الخرسانة، وأرشفة العمليات، وإدارة الآليات ومواعيد إعادة توزينها."
+version = "1.0.0"
+id = "artifacts/ghad-concrete"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/ghad-concrete/" ]
+localPort = 19277
+
+[services.development]
+run = "pnpm --filter @workspace/ghad-concrete run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ghad-concrete", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ghad-concrete/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19277"
+BASE_PATH = "/ghad-concrete/"

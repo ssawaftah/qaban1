@@ -1,0 +1,12 @@
+name = "ghad-concrete"
+compatibility_date = "2026-10-11"
+pages_build_output_dir = "./dist/public"
+
+[vars]
+APP_BASE_PATH = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ghad-concrete"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "./migrations"

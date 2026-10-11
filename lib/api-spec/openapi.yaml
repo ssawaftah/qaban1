@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Concrete weighing and mixer archive API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: mixers
+  - name: operations
+  - name: dashboard
 paths:
   /healthz:
     get:
@@ -24,6 +26,239 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /mixers:
+    get:
+      operationId: listMixers
+      tags: [mixers]
+      summary: List mixers
+      responses:
+        "200":
+          description: Mixer fleet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mixer"
+    post:
+      operationId: createMixer
+      tags: [mixers]
+      summary: Add a mixer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MixerInput"
+      responses:
+        "201":
+          description: Mixer added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mixer"
+  /mixers/{id}:
+    patch:
+      operationId: updateMixer
+      tags: [mixers]
+      summary: Update mixer details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MixerUpdate"
+      responses:
+        "200":
+          description: Updated mixer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mixer"
+        "404":
+          description: Mixer not found
+    delete:
+      operationId: deleteMixer
+      tags: [mixers]
+      summary: Delete mixer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Mixer deleted; archived operations remain
+        "404":
+          description: Mixer not found
+  /mixers/{id}/tare:
+    post:
+      operationId: updateMixerTare
+      tags: [mixers]
+      summary: Record a new empty-weight check
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MixerTareInput"
+      responses:
+        "200":
+          description: Updated tare weight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mixer"
+        "404":
+          description: Mixer not found
+  /operations:
+    get:
+      operationId: listOperations
+      tags: [operations]
+      summary: List and filter archived operations
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: customerName
+          in: query
+          schema:
+            type: string
+        - name: mixerId
+          in: query
+          schema:
+            type: integer
+        - name: vehicleNumber
+          in: query
+          schema:
+            type: string
+        - name: driverName
+          in: query
+          schema:
+            type: string
+        - name: grossMinKg
+          in: query
+          schema:
+            type: number
+        - name: grossMaxKg
+          in: query
+          schema:
+            type: number
+        - name: tareMinKg
+          in: query
+          schema:
+            type: number
+        - name: tareMaxKg
+          in: query
+          schema:
+            type: number
+        - name: concreteMinKg
+          in: query
+          schema:
+            type: number
+        - name: concreteMaxKg
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Filtered operations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Operation"
+    post:
+      operationId: createOperation
+      tags: [operations]
+      summary: Archive a calculated concrete operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperationInput"
+      responses:
+        "201":
+          description: Operation archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operation"
+  /operations/{id}:
+    patch:
+      operationId: updateOperation
+      tags: [operations]
+      summary: Edit an archived operation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperationUpdate"
+      responses:
+        "200":
+          description: Updated operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operation"
+        "404":
+          description: Operation not found
+    delete:
+      operationId: deleteOperation
+      tags: [operations]
+      summary: Delete an archived operation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Operation deleted
+        "404":
+          description: Operation not found
+  /summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Read fleet and production summary
+      responses:
+        "200":
+          description: Summary totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +268,185 @@ components:
           type: string
       required:
         - status
+    Mixer:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicleNumber:
+          type: string
+        driverName:
+          type: string
+        tareWeightKg:
+          type: number
+        tareWeighedAt:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - vehicleNumber
+        - driverName
+        - tareWeightKg
+        - tareWeighedAt
+        - createdAt
+        - updatedAt
+    MixerInput:
+      type: object
+      properties:
+        vehicleNumber:
+          type: string
+          minLength: 1
+          maxLength: 30
+        driverName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        tareWeightKg:
+          type: number
+          exclusiveMinimum: 0
+        tareWeighedAt:
+          type: string
+          format: date
+      required:
+        - vehicleNumber
+        - driverName
+        - tareWeightKg
+        - tareWeighedAt
+    MixerUpdate:
+      type: object
+      properties:
+        vehicleNumber:
+          type: string
+          minLength: 1
+          maxLength: 30
+        driverName:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - vehicleNumber
+        - driverName
+    MixerTareInput:
+      type: object
+      properties:
+        tareWeightKg:
+          type: number
+          exclusiveMinimum: 0
+        tareWeighedAt:
+          type: string
+          format: date
+      required:
+        - tareWeightKg
+        - tareWeighedAt
+    Operation:
+      type: object
+      properties:
+        id:
+          type: integer
+        operationDate:
+          type: string
+          format: date
+        mixerId:
+          type: ["integer", "null"]
+        vehicleNumber:
+          type: string
+        driverName:
+          type: string
+        customerName:
+          type: string
+        grossWeightKg:
+          type: number
+        tareWeightKg:
+          type: number
+        concreteWeightKg:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - operationDate
+        - mixerId
+        - vehicleNumber
+        - driverName
+        - customerName
+        - grossWeightKg
+        - tareWeightKg
+        - concreteWeightKg
+        - createdAt
+        - updatedAt
+    OperationInput:
+      type: object
+      properties:
+        operationDate:
+          type: string
+          format: date
+        mixerId:
+          type: integer
+        customerName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        grossWeightKg:
+          type: number
+          exclusiveMinimum: 0
+      required:
+        - operationDate
+        - mixerId
+        - customerName
+        - grossWeightKg
+    OperationUpdate:
+      type: object
+      properties:
+        operationDate:
+          type: string
+          format: date
+        mixerId:
+          type: integer
+        customerName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        grossWeightKg:
+          type: number
+          exclusiveMinimum: 0
+      required:
+        - operationDate
+        - mixerId
+        - customerName
+        - grossWeightKg
+    DashboardSummary:
+      type: object
+      properties:
+        todayOperationsCount:
+          type: integer
+        todayConcreteKg:
+          type: number
+        totalOperationsCount:
+          type: integer
+        totalConcreteKg:
+          type: number
+        mixerCount:
+          type: integer
+        dueSoonTareCount:
+          type: integer
+        overdueTareCount:
+          type: integer
+      required:
+        - todayOperationsCount
+        - todayConcreteKg
+        - totalOperationsCount
+        - totalConcreteKg
+        - mixerCount
+        - dueSoonTareCount
+        - overdueTareCount
 
