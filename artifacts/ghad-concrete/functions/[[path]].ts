@@ -41,6 +41,8 @@ interface D1Database {
 interface Env {
   DB: D1Database;
   APP_BASE_PATH?: string;
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
 }
 
 interface PagesContext {
@@ -64,9 +66,237 @@ const notFound = (message: string) => json({ error: message }, 404);
 const conflict = (message: string) => json({ error: message }, 409);
 const serverError = (message: string) => json({ error: message }, 500);
 
+const SESSION_COOKIE = "ghad_session";
+const SESSION_TTL_SECONDS = 8 * 60 * 60;
+const LOGIN_FAILURE_LIMIT = 5;
+const LOGIN_LOCK_SECONDS = 15 * 60;
+
+interface AuthSessionRow {
+  expiresAt: number;
+}
+
+interface LoginAttemptRow {
+  firstAttemptAt: number;
+  failureCount: number;
+  lockedUntil: number;
+}
+
 function normalizeBasePath(value = ""): string {
   const trimmed = value.trim().replace(/^\/+|\/+$/g, "");
   return trimmed ? `/${trimmed}` : "";
+}
+
+function adminCredentials(env: Env): { username: string; password: string } | null {
+  const username = env.ADMIN_USERNAME?.trim();
+  const password = env.ADMIN_PASSWORD;
+  if (!username || !password || Array.from(password).length < 14) return null;
+  return { username, password };
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function constantTimeTextEqual(left: string, right: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [leftDigest, rightDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(left)),
+    crypto.subtle.digest("SHA-256", encoder.encode(right)),
+  ]);
+  const a = new Uint8Array(leftDigest);
+  const b = new Uint8Array(rightDigest);
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) difference |= a[index] ^ b[index];
+  return difference === 0;
+}
+
+function cookieValue(request: Request, name: string): string | null {
+  const prefix = `${name}=`;
+  const item = (request.headers.get("cookie") ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  return item ? item.slice(prefix.length) : null;
+}
+
+function cookiePath(basePath: string): string {
+  return basePath ? `${basePath}/` : "/";
+}
+
+function setSessionCookie(response: Response, token: string, basePath: string): Response {
+  response.headers.set(
+    "set-cookie",
+    `${SESSION_COOKIE}=${token}; Path=${cookiePath(basePath)}; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`,
+  );
+  return response;
+}
+
+function clearSessionCookie(response: Response, basePath: string): Response {
+  response.headers.set(
+    "set-cookie",
+    `${SESSION_COOKIE}=; Path=${cookiePath(basePath)}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`,
+  );
+  return response;
+}
+
+async function sessionTokenHash(request: Request): Promise<string | null> {
+  const token = cookieValue(request, SESSION_COOKIE);
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
+  return sha256Hex(token);
+}
+
+async function hasActiveSession(db: D1Database, request: Request): Promise<boolean> {
+  const tokenHash = await sessionTokenHash(request);
+  if (!tokenHash) return false;
+  const session = await db
+    .prepare("SELECT expires_at AS expiresAt FROM auth_sessions WHERE token_hash = ?")
+    .bind(tokenHash)
+    .first<AuthSessionRow>();
+  if (!session) return false;
+  if (session.expiresAt > Math.floor(Date.now() / 1000)) return true;
+  await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
+  return false;
+}
+
+async function loginClientHash(request: Request): Promise<string> {
+  const ipAddress = request.headers.get("cf-connecting-ip")?.trim() || "unknown";
+  return sha256Hex(ipAddress);
+}
+
+async function activeLoginLockSeconds(
+  db: D1Database,
+  clientHash: string,
+  now: number,
+): Promise<number> {
+  const row = await db
+    .prepare("SELECT locked_until AS lockedUntil FROM auth_login_attempts WHERE client_hash = ?")
+    .bind(clientHash)
+    .first<Pick<LoginAttemptRow, "lockedUntil">>();
+  return row && row.lockedUntil > now ? row.lockedUntil - now : 0;
+}
+
+async function recordLoginFailure(
+  db: D1Database,
+  clientHash: string,
+  now: number,
+): Promise<number> {
+  const current = await db
+    .prepare(
+      `SELECT first_attempt_at AS firstAttemptAt,
+              failure_count AS failureCount,
+              locked_until AS lockedUntil
+       FROM auth_login_attempts WHERE client_hash = ?`,
+    )
+    .bind(clientHash)
+    .first<LoginAttemptRow>();
+  const windowExpired = !current || now - current.firstAttemptAt >= LOGIN_LOCK_SECONDS;
+  const previousLockExpired = current?.lockedUntil ? current.lockedUntil <= now : false;
+  const resetWindow = windowExpired || previousLockExpired;
+  const firstAttemptAt = resetWindow ? now : current.firstAttemptAt;
+  const failureCount = resetWindow ? 1 : current.failureCount + 1;
+  const lockedUntil = failureCount >= LOGIN_FAILURE_LIMIT ? now + LOGIN_LOCK_SECONDS : 0;
+
+  await db
+    .prepare(
+      `INSERT INTO auth_login_attempts
+         (client_hash, first_attempt_at, failure_count, locked_until)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(client_hash) DO UPDATE SET
+         first_attempt_at = excluded.first_attempt_at,
+         failure_count = excluded.failure_count,
+         locked_until = excluded.locked_until`,
+    )
+    .bind(clientHash, firstAttemptAt, failureCount, lockedUntil)
+    .run();
+  return Math.max(0, lockedUntil - now);
+}
+
+async function handleAuth(
+  context: PagesContext,
+  pathname: string,
+  basePath: string,
+): Promise<Response> {
+  const { request, env } = context;
+  const method = request.method.toUpperCase();
+  const db = env.DB;
+
+  if (pathname === "/api/auth/logout" && method === "POST") {
+    const tokenHash = await sessionTokenHash(request);
+    if (tokenHash) {
+      await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
+    }
+    return clearSessionCookie(json({ authenticated: false }), basePath);
+  }
+
+  const credentials = adminCredentials(env);
+  if (!credentials) {
+    return json(
+      { error: "إعداد الدخول غير مكتمل. أضف ADMIN_USERNAME وحدد كلمة مرور لا تقل عن 14 حرفًا في ADMIN_PASSWORD ضمن إعدادات Cloudflare Pages." },
+      503,
+    );
+  }
+
+  if (pathname === "/api/auth/session" && method === "GET") {
+    return (await hasActiveSession(db, request))
+      ? json({ authenticated: true })
+      : json({ authenticated: false }, 401);
+  }
+
+  if (pathname === "/api/auth/login" && method === "POST") {
+    const clientHash = await loginClientHash(request);
+    const now = Math.floor(Date.now() / 1000);
+    const lockedSeconds = await activeLoginLockSeconds(db, clientHash, now);
+    if (lockedSeconds > 0) {
+      const response = json({ error: "محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا." }, 429);
+      response.headers.set("retry-after", String(lockedSeconds));
+      return response;
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return badRequest("بيانات تسجيل الدخول غير صالحة.");
+    }
+    if (!body || typeof body !== "object") return badRequest("بيانات تسجيل الدخول غير صالحة.");
+    const input = body as Record<string, unknown>;
+    const username = asText(input.username, 120);
+    const password =
+      typeof input.password === "string" && input.password.length > 0 && input.password.length <= 256
+        ? input.password
+        : null;
+    if (!username || !password) return badRequest("أدخل اسم المستخدم وكلمة المرور.");
+
+    const [usernameMatches, passwordMatches] = await Promise.all([
+      constantTimeTextEqual(username, credentials.username),
+      constantTimeTextEqual(password, credentials.password),
+    ]);
+    if (!usernameMatches || !passwordMatches) {
+      const retrySeconds = await recordLoginFailure(db, clientHash, now);
+      const response = json(
+        { error: retrySeconds > 0 ? "محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجددًا." : "اسم المستخدم أو كلمة المرور غير صحيحة." },
+        retrySeconds > 0 ? 429 : 401,
+      );
+      if (retrySeconds > 0) response.headers.set("retry-after", String(retrySeconds));
+      return response;
+    }
+
+    await db.prepare("DELETE FROM auth_login_attempts WHERE client_hash = ?").bind(clientHash).run();
+    await db.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now).run();
+    const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+    const token = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const tokenHash = await sha256Hex(token);
+    const expiresAt = now + SESSION_TTL_SECONDS;
+    await db
+      .prepare("INSERT INTO auth_sessions (token_hash, created_at, expires_at) VALUES (?, ?, ?)")
+      .bind(tokenHash, new Date(now * 1000).toISOString(), expiresAt)
+      .run();
+
+    return setSessionCookie(json({ authenticated: true }), token, basePath);
+  }
+
+  return notFound("المسار المطلوب غير موجود.");
 }
 
 function asNumber(value: unknown): number | null {
@@ -540,6 +770,16 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     return context.next();
   }
   try {
+    const method = context.request.method.toUpperCase();
+    if (pathname === "/api/healthz" && method === "GET") {
+      return json({ status: "ok" });
+    }
+    if (pathname.startsWith("/api/auth/")) {
+      return await handleAuth(context, pathname, basePath);
+    }
+    if (!(await hasActiveSession(context.env.DB, context.request))) {
+      return json({ error: "يلزم تسجيل الدخول للوصول إلى البيانات." }, 401);
+    }
     return await handleApi(context, pathname);
   } catch (error) {
     const message = String(error);

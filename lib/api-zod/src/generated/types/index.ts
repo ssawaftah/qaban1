@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminLoginInput';
+export * from './authStatus';
 export * from './dashboardSummary';
 export * from './healthStatus';
 export * from './listOperationsParams';

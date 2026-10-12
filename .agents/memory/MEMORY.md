@@ -1,1 +1,2 @@
 - [Cloudflare Pages previews](cloudflare-pages-previews.md) — Pages dev rejects custom config paths; local D1 migration and dev must share persistence, and nested artifact URLs need an SPA fallback.
+- [Ghad admin login](ghad-auth.md) — Keep the company's login as one shared in-app admin account, not Cloudflare Access or per-employee accounts.

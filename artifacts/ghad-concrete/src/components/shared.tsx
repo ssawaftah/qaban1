@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Activity, Archive, CalendarDays, CircleHelp, Truck } from 'lucide-react';
+import { Activity, Archive, CalendarDays, CircleHelp, LogOut, Truck } from 'lucide-react';
 import type { Mixer } from '@workspace/api-client-react';
 
 export type Notice = { id: number; message: string; error?: boolean };
@@ -16,7 +16,7 @@ export function Toasts({ notices, dismiss }: { notices: Notice[]; dismiss: (id: 
   return <div className="toast-stack" aria-live="polite">{notices.map((n) => <div key={n.id} className={`toast${n.error ? ' error' : ''}`} data-testid={`status-toast-${n.id}`}>{n.message}</div>)}</div>;
 }
 
-export function Shell({ children }: { children: ReactNode }) {
+export function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
   const [path] = useLocation();
   const links = [
     { href: '/', label: 'الميزان المباشر', Icon: Activity },
@@ -32,7 +32,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="side-note"><strong>دقة كل رحلة تبدأ من هنا</strong>وزنٌ واضح الآن، وسجلٌّ موثوق عند الرجوع إليه.</div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div><div className="topbar-label">الغد للباطون الجاهز <span className="mini-mark">/ OPERATIONS</span></div><div className="topbar-title">{path === '/' ? 'محطة حساب الوزن' : path === '/archive' ? 'سجل الرحلات المؤرشفة' : 'أسطول الخلاطات'}</div></div><div className="today-chip"><CalendarDays />{today}</div></header>
+      <header className="topbar"><div><div className="topbar-label">الغد للباطون الجاهز <span className="mini-mark">/ OPERATIONS</span></div><div className="topbar-title">{path === '/' ? 'محطة حساب الوزن' : path === '/archive' ? 'سجل الرحلات المؤرشفة' : 'أسطول الخلاطات'}</div></div><div className="topbar-actions"><div className="today-chip"><CalendarDays />{today}</div><button type="button" className="btn btn-secondary logout-btn" onClick={onLogout} aria-label="تسجيل الخروج"><LogOut /><span>خروج</span></button></div></header>
       <div className="content fade-in">{children}</div>
     </main>
     <nav className="mobile-nav" aria-label="التنقل">{links.map(({ href, label, Icon }) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} data-testid={`mobile-link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span></Link>)}</nav>

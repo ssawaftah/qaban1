@@ -18,6 +18,41 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Check the current admin session
+ */
+export const GetAuthSessionResponse = zod.object({
+  "authenticated": zod.boolean()
+})
+
+
+/**
+ * @summary Sign in with the shared admin account
+ */
+export const loginAdminBodyUsernameMax = 120;
+
+export const loginAdminBodyPasswordMax = 256;
+
+
+
+export const LoginAdminBody = zod.object({
+  "username": zod.string().min(1).max(loginAdminBodyUsernameMax),
+  "password": zod.string().min(1).max(loginAdminBodyPasswordMax)
+})
+
+export const LoginAdminResponse = zod.object({
+  "authenticated": zod.boolean()
+})
+
+
+/**
+ * @summary Sign out and revoke the current session
+ */
+export const LogoutAdminResponse = zod.object({
+  "authenticated": zod.boolean()
+})
+
+
+/**
  * @summary List mixers
  */
 export const ListMixersResponseItem = zod.object({

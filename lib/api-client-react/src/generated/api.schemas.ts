@@ -5,6 +5,23 @@
  * Concrete weighing and mixer archive API
  * OpenAPI spec version: 0.1.0
  */
+export interface AuthStatus {
+  authenticated: boolean;
+}
+
+export interface AdminLoginInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  username: string;
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
+  password: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
