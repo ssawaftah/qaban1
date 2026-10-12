@@ -6,7 +6,7 @@ import {
   useDeleteOperation, useListMixers, useListOperations, useUpdateOperation,
 } from '@workspace/api-client-react';
 import type { ListOperationsParams, Operation } from '@workspace/api-client-react';
-import { EmptyState, ErrorBox, kg, LoadingBlock, localDateInput, PageHeading, tonnes, dateLabel } from '@/components/shared';
+import { cubicMeters, EmptyState, ErrorBox, kg, LoadingBlock, localDateInput, PageHeading, dateLabel } from '@/components/shared';
 
 type FilterState = Record<string, string>;
 const emptyFilters: FilterState = {
@@ -91,10 +91,10 @@ export default function ArchivePage({ notify }: { notify: (message: string, erro
   };
 
   return <>
-    <PageHeading eyebrow="ARCHIVE / ٠٢" title="أرشيف العمليات" description="ابحث في الرحلات المحفوظة. الوزن الفارغ والصافي هنا هما اللقطة التي خُزّنت وقت الأرشفة." />
+    <PageHeading title="أرشيف المرتجعات" />
     {mixersQuery.isError && <ErrorBox retry={() => void mixersQuery.refetch()} text="تعذّر تحميل قائمة الخلاطات اللازمة للتصفية والتعديل." />}
     <section className="panel filter-panel">
-      <div className="panel-head"><div className="filter-heading"><Filter/><div><div className="panel-title">تصفية السجل</div><div className="panel-subtitle">كل الشروط تُرسل إلى الخادم عند تطبيق البحث</div></div></div><div className="actions" style={{margin:0}}><button type="button" className="btn btn-secondary" onClick={clearFilters} data-testid="button-clear-filters"><RotateCcw/>مسح</button><button type="button" className="btn btn-primary" onClick={applyFilters} data-testid="button-apply-filters"><Search/>بحث في الأرشيف</button></div></div>
+      <div className="panel-head"><div className="filter-heading"><Filter/><div className="panel-title">تصفية السجل</div></div><div className="actions" style={{margin:0}}><button type="button" className="btn btn-secondary" onClick={clearFilters} data-testid="button-clear-filters"><RotateCcw/>مسح</button><button type="button" className="btn btn-primary" onClick={applyFilters} data-testid="button-apply-filters"><Search/>بحث</button></div></div>
       <div className="panel-body"><div className="grid filter-grid">
         <FilterInput label="من تاريخ" id="filter-date-from" type="date" value={draft.dateFrom} onChange={(v) => setFilter('dateFrom',v)} />
         <FilterInput label="إلى تاريخ" id="filter-date-to" type="date" value={draft.dateTo} onChange={(v) => setFilter('dateTo',v)} />
@@ -112,15 +112,15 @@ export default function ArchivePage({ notify }: { notify: (message: string, erro
     </section>
 
     <section className="panel">
-      <div className="panel-head"><div><div className="panel-title">الرحلات المحفوظة</div><div className="panel-subtitle">{query.data ? `${kg(query.data.length)} نتيجة من الخادم` : 'لقطات التشغيل الأصلية'}</div></div><span className="mini-mark">WEIGHT SNAPSHOT</span></div>
+      <div className="panel-head"><div className="panel-title">العمليات المحفوظة{query.data ? ` · ${kg(query.data.length)}` : ''}</div></div>
       {query.isError && <div style={{padding:18}}><ErrorBox retry={() => void query.refetch()} /></div>}
-      {query.isLoading ? <div className="panel-body"><LoadingBlock rows={4}/></div> : query.data && query.data.length === 0 ? <EmptyState title={Object.values(active).some(Boolean) ? 'لا توجد نتائج مطابقة' : 'لا توجد عمليات مؤرشفة بعد'} detail={Object.values(active).some(Boolean) ? 'جرّب تعديل شروط البحث أو مسح عوامل التصفية.' : 'بعد حفظ أول رحلة من شاشة الميزان، ستظهر لقطة الوزن هنا.'} /> : query.data && <div className="table-wrap"><table><thead><tr><th>التاريخ</th><th>العميل</th><th>المركبة / السائق</th><th>الإجمالي</th><th>الفارغ المحفوظ</th><th>الصافي المحفوظ</th><th>الإجراءات</th></tr></thead><tbody>
+      {query.isLoading ? <div className="panel-body"><LoadingBlock rows={4}/></div> : query.data && query.data.length === 0 ? <EmptyState title={Object.values(active).some(Boolean) ? 'لا توجد نتائج مطابقة' : 'لا توجد عمليات محفوظة'} /> : query.data && <div className="table-wrap"><table><thead><tr><th>التاريخ</th><th>العميل</th><th>المركبة / السائق</th><th>الوزن القائم</th><th>الوزن الفارغ</th><th>المرتجع</th><th>الإجراءات</th></tr></thead><tbody>
         {query.data.map((operation) => <tr key={operation.id} data-testid={`row-operation-${operation.id}`}>
           <td>{dateLabel(operation.operationDate)}</td><td><strong data-testid={`text-customer-${operation.id}`}>{operation.customerName}</strong></td>
           <td><div>{operation.vehicleNumber}</div><small className="muted">{operation.driverName || '—'}</small></td>
           <td><span className="mono" data-testid={`text-gross-${operation.id}`}>{kg(operation.grossWeightKg)} كغ</span></td>
           <td><span className="mono" data-testid={`text-snapshot-tare-${operation.id}`}>{kg(operation.tareWeightKg)} كغ</span></td>
-          <td><span className="mono" data-testid={`text-snapshot-concrete-${operation.id}`}>{kg(operation.concreteWeightKg)} كغ</span><small className="muted" style={{display:'block',marginTop:3}}>{tonnes(operation.concreteWeightKg)} طن متري</small></td>
+          <td><strong className="mono" data-testid={`text-snapshot-concrete-${operation.id}`}>{cubicMeters(operation.concreteWeightKg)} م³</strong><small className="muted" style={{display:'block',marginTop:3}}>{kg(operation.concreteWeightKg)} كغ</small></td>
           <td><div className="row-actions"><button type="button" className="icon-btn" title="تعديل العملية" aria-label={`تعديل عملية ${operation.id}`} onClick={() => beginEdit(operation)} data-testid={`button-edit-operation-${operation.id}`}><Pencil/></button><button type="button" className="icon-btn danger" title="حذف العملية" aria-label={`حذف عملية ${operation.id}`} onClick={() => {setDeleting(operation);setDeleteError('');}} data-testid={`button-delete-operation-${operation.id}`}><Trash2/></button></div></td>
         </tr>)}
       </tbody></table></div>}
@@ -128,13 +128,13 @@ export default function ArchivePage({ notify }: { notify: (message: string, erro
 
     {editing && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !update.isPending) setEditing(null); }}>
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-operation-title">
-        <div className="modal-head"><div><h2 id="edit-operation-title">تعديل عملية مؤرشفة</h2><div className="panel-subtitle">تغيير تفاصيل الرحلة لا يغيّر لقطة الوزن الأصلية للخلاطة نفسها</div></div><button className="icon-btn" type="button" onClick={() => setEditing(null)} aria-label="إغلاق" data-testid="button-close-edit-operation"><X/></button></div>
+        <div className="modal-head"><div><h2 id="edit-operation-title">تعديل عملية محفوظة</h2></div><button className="icon-btn" type="button" onClick={() => setEditing(null)} aria-label="إغلاق" data-testid="button-close-edit-operation"><X/></button></div>
         <div className="modal-body"><div className="grid field-grid">
           <div className="field"><label htmlFor="edit-operation-customer">اسم العميل</label><input id="edit-operation-customer" className="control" maxLength={150} value={editCustomer} onChange={(e) => setEditCustomer(e.target.value)} data-testid="input-edit-operation-customer"/></div>
           <div className="field"><label htmlFor="edit-operation-date">تاريخ العملية</label><input id="edit-operation-date" type="date" className="control" value={editDate} onChange={(e) => setEditDate(e.target.value)} data-testid="input-edit-operation-date"/></div>
           <div className="field full"><label htmlFor="edit-operation-mixer">الخلاطة</label><select id="edit-operation-mixer" className="control select-control" value={editMixer} onChange={(e) => setEditMixer(e.target.value)} data-testid="select-edit-operation-mixer"><option value="">اختر الخلاطة</option>{(mixersQuery.data ?? []).map((m) => <option key={m.id} value={m.id}>{m.vehicleNumber} — {m.driverName} · فارغ {kg(m.tareWeightKg)} كغ</option>)}</select></div>
           <div className="field"><label htmlFor="edit-operation-gross">الوزن الإجمالي <span className="field-hint">كغ</span></label><input id="edit-operation-gross" type="number" min="1" step="1" dir="ltr" className="control" value={editGross} onChange={(e) => setEditGross(e.target.value)} data-testid="input-edit-operation-gross"/></div>
-          <div className="field"><label>لقطة محفوظة حالياً</label><div className="notice" style={{margin:0}}>فارغ {kg(editing.tareWeightKg)} كغ · صافي {kg(editing.concreteWeightKg)} كغ</div></div>
+          <div className="field"><label>المرتجع الحالي</label><div className="notice" style={{margin:0}}>{cubicMeters(editing.concreteWeightKg)} م³ · {kg(editing.concreteWeightKg)} كغ</div></div>
           {editError && <div className="error-box field full" role="alert" data-testid="status-edit-error">{editError}</div>}
           <div className="actions field full"><button className="btn btn-primary" type="button" onClick={saveEdit} disabled={update.isPending || mixersQuery.isLoading} data-testid="button-submit-edit-operation"><Check/>{update.isPending ? 'جارٍ الحفظ…' : 'حفظ التعديلات'}</button><button className="btn btn-secondary" type="button" onClick={() => setEditing(null)} disabled={update.isPending} data-testid="button-cancel-edit-operation">إلغاء</button></div>
         </div></div>
@@ -143,7 +143,7 @@ export default function ArchivePage({ notify }: { notify: (message: string, erro
 
     {deleting && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !deleteMutation.isPending) setDeleting(null); }}>
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="delete-operation-title">
-        <div className="modal-head"><div><h2 id="delete-operation-title">حذف العملية؟</h2><div className="panel-subtitle">إجراء نهائي من الأرشيف</div></div><button className="icon-btn" type="button" onClick={() => setDeleting(null)} aria-label="إغلاق" data-testid="button-close-delete-operation"><X/></button></div>
+        <div className="modal-head"><div><h2 id="delete-operation-title">حذف العملية؟</h2></div><button className="icon-btn" type="button" onClick={() => setDeleting(null)} aria-label="إغلاق" data-testid="button-close-delete-operation"><X/></button></div>
         <div className="modal-body"><div className="notice" style={{marginTop:0}}>سيتم حذف رحلة <strong>{deleting.customerName}</strong> للمركبة <strong>{deleting.vehicleNumber}</strong> بتاريخ {dateLabel(deleting.operationDate)}.</div>{deleteError && <div className="error-box" role="alert" data-testid="status-delete-error">{deleteError}</div>}<div className="actions"><button type="button" className="btn btn-danger" onClick={confirmDelete} disabled={deleteMutation.isPending} data-testid="button-confirm-delete-operation"><Trash2/>{deleteMutation.isPending ? 'جارٍ الحذف…' : 'تأكيد الحذف'}</button><button type="button" className="btn btn-secondary" onClick={() => setDeleting(null)} disabled={deleteMutation.isPending} data-testid="button-cancel-delete-operation">إلغاء</button></div></div>
       </section>
     </div>}

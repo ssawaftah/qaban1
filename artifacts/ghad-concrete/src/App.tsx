@@ -85,16 +85,11 @@ function LoginPage({
     <section className="login-card" aria-labelledby="login-title">
       <div className="login-brand">
         <div className="brand-mark">غ</div>
-        <div>
-          <div className="brand-title">الغد للباطون الجاهز</div>
-          <div className="brand-sub">مكتب الوزن والتشغيل</div>
-        </div>
+        <div className="brand-title">الغد للباطون الجاهز</div>
       </div>
       <div className="login-heading">
         <div className="login-icon"><LockKeyhole size={19} /></div>
-        <div className="eyebrow">دخول المشرف</div>
         <h1 id="login-title">تسجيل الدخول</h1>
-        <p className="page-description">أدخل بيانات الحساب لمتابعة عمليات الوزن والأرشيف.</p>
       </div>
 
       {setupError && <div className="login-alert" role="alert">
@@ -150,7 +145,6 @@ function LoginPage({
         </button>
       </form>
       {serviceError && <button type="button" className="login-retry" onClick={onRetry}>إعادة المحاولة</button>}
-      <div className="login-footnote">الدخول مخصص للمخولين بإدارة العمليات.</div>
     </section>
   </main>;
 }

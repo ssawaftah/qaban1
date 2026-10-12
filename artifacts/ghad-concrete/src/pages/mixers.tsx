@@ -59,15 +59,15 @@ export default function MixersPage({ notify }: { notify: (message: string, error
     });
   };
   return <>
-    <PageHeading eyebrow="FLEET / ٠٣" title="إدارة الخلاطات" description="بيانات السائقين والأوزان الفارغة الحالية وحالة حداثة كل قراءة.">
+    <PageHeading title="إدارة الخلاطات">
       <button type="button" className="btn btn-primary" onClick={openCreate} data-testid="button-add-mixer"><Plus />إضافة خلاطة</button>
     </PageHeading>
     <section className="panel">
-      <div className="panel-head"><div><div className="panel-title">قائمة الأسطول</div><div className="panel-subtitle">{query.data ? `${kg(query.data.length)} خلاطات مسجلة` : 'البيانات المحفوظة على الخادم'}</div></div>
+      <div className="panel-head"><div className="panel-title">الخلاطات المسجلة{query.data ? ` · ${kg(query.data.length)}` : ''}</div>
         <div className="legend" aria-label="دليل حداثة الوزن"><span className="legend-item"><i className="legend-dot" style={{background:'#4d9a70'}}/>حديث · حتى ٣٠ يوماً</span><span className="legend-item"><i className="legend-dot" style={{background:'#d49a37'}}/>قريب · ٣١–٨٩ يوماً</span><span className="legend-item"><i className="legend-dot" style={{background:'#bc5a4e'}}/>متأخر · ٩٠ يوماً فأكثر</span></div>
       </div>
       {query.isError && <div style={{padding:18}}><ErrorBox retry={() => void query.refetch()} /></div>}
-      {query.isLoading ? <div className="panel-body"><LoadingBlock rows={4}/></div> : query.data && query.data.length === 0 ? <EmptyState title="الأسطول فارغ حالياً" detail="أضف أول خلاطة مع وزنها الفارغ للبدء بحساب الرحلات." /> : query.data && <div className="table-wrap"><table><thead><tr><th>رقم المركبة</th><th>السائق</th><th>الوزن الفارغ</th><th>آخر قياس</th><th>حداثة الوزن</th><th>الإجراءات</th></tr></thead><tbody>
+      {query.isLoading ? <div className="panel-body"><LoadingBlock rows={4}/></div> : query.data && query.data.length === 0 ? <EmptyState title="لا توجد خلاطات" /> : query.data && <div className="table-wrap"><table><thead><tr><th>رقم المركبة</th><th>السائق</th><th>الوزن الفارغ</th><th>آخر قياس</th><th>حداثة الوزن</th><th>الإجراءات</th></tr></thead><tbody>
         {query.data.map((mixer) => {
           const state = tareFreshness(mixer.tareWeighedAt);
           return <tr key={mixer.id} data-testid={`row-mixer-${mixer.id}`}>
@@ -79,11 +79,9 @@ export default function MixersPage({ notify }: { notify: (message: string, error
         })}
       </tbody></table></div>}
     </section>
-    <div className="notice" style={{marginTop:16}}><strong>مفتاح حداثة الوزن:</strong> أخضر حتى ٣٠ يوماً، كهرماني من ٣١ إلى ٨٩ يوماً، وأحمر من ٩٠ يوماً (٣ أشهر) فما فوق. اللون يصف تاريخ آخر وزن فارغ مسجل، ولا يغيّر لقطة وزن الرحلات المؤرشفة.</div>
-
     {dialog && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setDialog(null); }}>
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="mixer-dialog-title">
-        <div className="modal-head"><div><h2 id="mixer-dialog-title">{dialog === 'mixer' ? selected ? 'تعديل بيانات الخلاطة' : 'إضافة خلاطة جديدة' : dialog === 'tare' ? 'تسجيل وزن فارغ جديد' : 'تأكيد حذف الخلاطة'}</h2><div className="panel-subtitle">{selected?.vehicleNumber ?? 'بيانات الأسطول محفوظة عبر النظام'}</div></div><button type="button" className="icon-btn" onClick={() => setDialog(null)} disabled={busy} aria-label="إغلاق" data-testid="button-close-mixer-dialog"><X/></button></div>
+        <div className="modal-head"><div><h2 id="mixer-dialog-title">{dialog === 'mixer' ? selected ? 'تعديل بيانات الخلاطة' : 'إضافة خلاطة جديدة' : dialog === 'tare' ? 'تسجيل وزن فارغ جديد' : 'تأكيد حذف الخلاطة'}</h2>{selected && <div className="panel-subtitle">{selected.vehicleNumber}</div>}</div><button type="button" className="icon-btn" onClick={() => setDialog(null)} disabled={busy} aria-label="إغلاق" data-testid="button-close-mixer-dialog"><X/></button></div>
         <div className="modal-body">
           {dialog === 'delete' ? <><div className="notice" style={{marginTop:0}}>سيتم حذف <strong>{selected?.vehicleNumber}</strong> من قائمة الخلاطات. لا يمكن التراجع عن هذا الإجراء.</div>{error && <div className="error-box">{error}</div>}<div className="actions"><button type="button" className="btn btn-danger" onClick={confirmDelete} disabled={busy} data-testid="button-confirm-delete-mixer"><Trash2/>{deleteMutation.isPending ? 'جارٍ الحذف…' : 'حذف الخلاطة'}</button><button type="button" className="btn btn-secondary" onClick={() => setDialog(null)} disabled={busy} data-testid="button-cancel-delete-mixer">إلغاء</button></div></> :
           <div className="grid field-grid">

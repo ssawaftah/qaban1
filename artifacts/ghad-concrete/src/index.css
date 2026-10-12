@@ -73,26 +73,19 @@ button { cursor: pointer; }
 .brand { display:flex; align-items:center; gap:12px; padding: 2px 8px 28px; border-bottom:1px solid #ffffff20; }
 .brand-mark { display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:#e8b65d; color:#183c3a; font-weight:800; font-size:20px; }
 .brand-title { font-size:15px; font-weight:700; line-height:1.45; }
-.brand-sub { color:#a8c1b9; font-size:10px; letter-spacing:.08em; margin-top:2px; }
-.nav-caption { margin:27px 10px 10px; color:#93b0a8; font:500 10px var(--app-font-mono); letter-spacing:.12em; }
 .nav-list { display:grid; gap:6px; }
 .nav-link { display:flex; align-items:center; gap:12px; padding:12px 13px; border-radius:9px; color:#bfd0c9; font-size:13px; transition:background .18s,color .18s, transform .18s; }
 .nav-link:hover { background:#ffffff0d; color:#fff; transform:translateX(-2px); }
 .nav-link.active { color:#fff; background:#ffffff17; box-shadow:inset -3px 0 #e8b65d; }
 .nav-link svg { width:17px; height:17px; }
-.side-note { margin-top:auto; padding:14px 13px; border:1px solid #ffffff20; border-radius:10px; color:#bdd0c8; font-size:11px; line-height:1.8; }
-.side-note strong { display:block; color:#e9bf70; margin-bottom:2px; font-size:12px; }
 .main-area { flex:1; min-width:0; }
 .topbar { height:76px; padding:0 42px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid hsl(var(--border)); background:#f7f5efcc; }
-.topbar-label { color:#78817e; font-size:11px; }
 .topbar-title { font-size:14px; font-weight:700; margin-top:3px; }
 .today-chip { display:flex; align-items:center; gap:8px; color:#65716d; font-size:12px; border:1px solid hsl(var(--border)); padding:8px 12px; border-radius:8px; background:#fbfaf6; }
 .today-chip svg { width:15px; }
 .content { max-width:1440px; margin:0 auto; padding:34px 42px 56px; }
 .page-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:27px; }
-.eyebrow { font:600 10px var(--app-font-mono); color:#b0813f; letter-spacing:.14em; text-transform:uppercase; }
 h1 { margin:6px 0 0; font-size:clamp(24px, 3vw, 34px); letter-spacing:-.045em; line-height:1.25; }
-.page-description { color:#77817d; font-size:13px; margin:8px 0 0; }
 .panel { background:hsl(var(--card)); border:1px solid hsl(var(--border)); border-radius:14px; box-shadow:0 5px 18px #27373208; }
 .panel-head { padding:19px 22px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e9e5dc; gap:12px; }
 .panel-title { font-size:15px; font-weight:700; }
@@ -130,7 +123,8 @@ h1 { margin:6px 0 0; font-size:clamp(24px, 3vw, 34px); letter-spacing:-.045em; l
 .result-tonnes { display:flex; justify-content:space-between; color:#cad9d1; font-size:12px; }
 .result-tonnes strong { color:white; font:500 15px var(--app-font-mono); direction:ltr; }
 .calc-equation { display:flex; gap:9px; align-items:center; font:12px var(--app-font-mono); color:#83908a; margin-top:19px; direction:ltr; justify-content:flex-end; }
-.calc-equation span:last-child { color:#375e56; }
+.calc-equation strong { color:#205b55; font-weight:700; }
+.density-note { color:#64736c; background:#f4f1e9; border:1px solid hsl(var(--border)); border-radius:9px; padding:12px 14px; font-size:12px; }
 .notice { padding:12px 14px; border-radius:8px; background:#f3f0e7; color:#697771; font-size:11px; line-height:1.75; margin-top:16px; }
 .notice strong { color:#284e46; }
 .stats-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:20px; border:1px solid hsl(var(--border)); border-radius:12px; background:#fbfaf6; overflow:hidden; }
@@ -188,7 +182,6 @@ tbody tr:hover { background:#fbfaf5; }
 .mobile-nav { display:none; }
 .error-box { display:flex; align-items:center; justify-content:space-between; gap:14px; background:#fff1ee; border:1px solid #ecc6bd; color:#8e4038; padding:13px 15px; border-radius:9px; font-size:12px; margin-bottom:16px; }
 .error-box button { border:0; background:transparent; color:inherit; text-decoration:underline; font-weight:700; }
-.mini-mark { font:600 10px var(--app-font-mono); color:#c29046; letter-spacing:.1em; }
 .table-empty { padding:0!important; }
 .topbar-actions { display:flex; align-items:center; gap:10px; }
 .logout-btn { min-height:36px; padding:0 11px; white-space:nowrap; }
@@ -204,14 +197,12 @@ tbody tr:hover { background:#fbfaf5; }
 .login-brand { display:flex; align-items:center; gap:12px; padding-bottom:23px; border-bottom:1px solid #e9e5dc; }
 .login-brand .brand-mark { width:45px; height:45px; }
 .login-brand .brand-title { color:#213f3b; font-size:15px; }
-.login-brand .brand-sub { color:#85918b; }
 .login-heading { margin-top:27px; }
 .login-icon {
   display:grid; place-items:center; width:42px; height:42px; margin-bottom:16px;
   color:#245b54; background:#e9f1eb; border:1px solid #d5e4d9; border-radius:12px;
 }
 .login-heading h1 { margin-top:7px; font-size:27px; }
-.login-heading .page-description { margin-top:8px; line-height:1.8; }
 .login-form { display:grid; gap:17px; margin-top:25px; }
 .password-control { position:relative; }
 .password-control .control { padding-left:48px; }
@@ -229,10 +220,6 @@ tbody tr:hover { background:#fbfaf5; }
   display:block; margin:15px auto 0; padding:6px 10px; border:0; background:transparent;
   color:#315e55; font-size:12px; font-weight:700; text-decoration:underline;
 }
-.login-footnote {
-  margin-top:22px; padding-top:17px; border-top:1px solid #e9e5dc;
-  color:#89918c; font-size:11px; text-align:center;
-}
 .login-loading { color:#52665f; font-size:13px; }
 
 @media (max-width: 1000px) {
@@ -247,7 +234,6 @@ tbody tr:hover { background:#fbfaf5; }
   .main-area { width:100%; }
   .topbar { height:61px; padding:0 17px; }
   .topbar-actions { gap:5px; }
-  .topbar-label { font-size:9px; }
   .topbar-title { font-size:12px; }
   .today-chip { font-size:10px; padding:6px 9px; }
   .logout-btn { min-height:32px; width:34px; padding:0; }
@@ -255,7 +241,6 @@ tbody tr:hover { background:#fbfaf5; }
   .logout-btn svg { width:16px; height:16px; }
   .content { padding:23px 16px 30px; }
   .page-heading { align-items:flex-start; margin-bottom:19px; }
-  .page-description { max-width:300px; line-height:1.7; }
   .calc-layout { grid-template-columns:1fr; }
   .field-grid { grid-template-columns:1fr; }
   .stats-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -277,4 +262,5 @@ tbody tr:hover { background:#fbfaf5; }
   .legend { gap:9px; }
   table { min-width:780px; }
   .result-card { padding:21px; }
+  .calc-equation { justify-content:flex-start; gap:6px; font-size:10px; }
 }

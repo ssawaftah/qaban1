@@ -26,21 +26,19 @@ export function Shell({ children, onLogout }: { children: ReactNode; onLogout: (
   const today = new Intl.DateTimeFormat('ar-JO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   return <div className="app-shell" dir="rtl">
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark">غ</div><div><div className="brand-title">الغد للباطون الجاهز</div><div className="brand-sub">مكتب الوزن والتشغيل</div></div></div>
-      <div className="nav-caption">مساحة التشغيل / ٠١</div>
+      <div className="brand"><div className="brand-mark">غ</div><div className="brand-title">الغد للباطون الجاهز</div></div>
       <nav className="nav-list" aria-label="التنقل الرئيسي">{links.map(({ href, label, Icon }) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} data-testid={`link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span></Link>)}</nav>
-      <div className="side-note"><strong>دقة كل رحلة تبدأ من هنا</strong>وزنٌ واضح الآن، وسجلٌّ موثوق عند الرجوع إليه.</div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div><div className="topbar-label">الغد للباطون الجاهز <span className="mini-mark">/ OPERATIONS</span></div><div className="topbar-title">{path === '/' ? 'محطة حساب الوزن' : path === '/archive' ? 'سجل الرحلات المؤرشفة' : 'أسطول الخلاطات'}</div></div><div className="topbar-actions"><div className="today-chip"><CalendarDays />{today}</div><button type="button" className="btn btn-secondary logout-btn" onClick={onLogout} aria-label="تسجيل الخروج"><LogOut /><span>خروج</span></button></div></header>
+      <header className="topbar"><div><div className="topbar-title">{path === '/' ? 'حساب المرتجع' : path === '/archive' ? 'أرشيف المرتجعات' : 'إدارة الخلاطات'}</div></div><div className="topbar-actions"><div className="today-chip"><CalendarDays />{today}</div><button type="button" className="btn btn-secondary logout-btn" onClick={onLogout} aria-label="تسجيل الخروج"><LogOut /><span>خروج</span></button></div></header>
       <div className="content fade-in">{children}</div>
     </main>
     <nav className="mobile-nav" aria-label="التنقل">{links.map(({ href, label, Icon }) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} data-testid={`mobile-link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span></Link>)}</nav>
   </div>;
 }
 
-export function PageHeading({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children?: ReactNode }) {
-  return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p className="page-description">{description}</p></div>{children}</div>;
+export function PageHeading({ title, children }: { title: string; children?: ReactNode }) {
+  return <div className="page-heading"><h1>{title}</h1>{children}</div>;
 }
 
 export function ErrorBox({ retry, text = 'تعذّر تحميل البيانات من الخادم.' }: { retry: () => void; text?: string }) {
@@ -51,8 +49,8 @@ export function LoadingBlock({ rows = 3 }: { rows?: number }) {
   return <div className="grid" aria-label="جارٍ التحميل">{Array.from({ length: rows }, (_, i) => <div key={i} className="skeleton" />)}</div>;
 }
 
-export function EmptyState({ title, detail }: { title: string; detail: string }) {
-  return <div className="empty-state" data-testid="status-empty"><div className="empty-mark"><CircleHelp size={21} /></div><strong>{title}</strong><p>{detail}</p></div>;
+export function EmptyState({ title, detail }: { title: string; detail?: string }) {
+  return <div className="empty-state" data-testid="status-empty"><div className="empty-mark"><CircleHelp size={21} /></div><strong>{title}</strong>{detail && <p>{detail}</p>}</div>;
 }
 
 export function MixerOption({ mixer }: { mixer: Mixer }) {
@@ -64,6 +62,11 @@ export function kg(value: number) {
 }
 export function tonnes(value: number) {
   return new Intl.NumberFormat('ar-JO', { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(value / 1000);
+}
+export const CONCRETE_DENSITY_KG_PER_M3 = 2330;
+export function cubicMeters(weightKg: number) {
+  return new Intl.NumberFormat('ar-JO', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+    .format(weightKg / CONCRETE_DENSITY_KG_PER_M3);
 }
 export function dateLabel(value: string) {
   const date = new Date(value);
