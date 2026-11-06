@@ -43,6 +43,7 @@ interface Env {
   APP_BASE_PATH?: string;
   ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
+  SCALE_API_TOKEN?: string;
 }
 
 interface PagesContext {
@@ -699,6 +700,22 @@ async function summary(db: D1Database): Promise<Response> {
   });
 }
 
+async function handleScaleWrite(context: PagesContext): Promise<Response> {
+  const expected = context.env.SCALE_API_TOKEN;
+  if (!expected || expected.length < 24) return json({ error: "Scale integration is not configured." }, 503);
+  const authorization = context.request.headers.get("authorization") ?? "";
+  const provided = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!provided || !(await constantTimeTextEqual(provided, expected))) return json({ error: "Unauthorized." }, 401);
+  const body = await parseBody(context.request);
+  const weightKg = body ? asNumber(body.weightKg) : null;
+  if (weightKg === null || weightKg <= 0 || weightKg > 200000) return badRequest("Invalid weightKg.");
+  const timestamp = now();
+  await context.env.DB.prepare(
+    "INSERT INTO scale_latest (id, weight_kg, received_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET weight_kg = excluded.weight_kg, received_at = excluded.received_at"
+  ).bind(weightKg, timestamp).run();
+  return json({ accepted: true, weightKg, receivedAt: timestamp });
+}
+
 async function handleApi(context: PagesContext, pathname: string): Promise<Response> {
   const { request, env } = context;
   const db = env.DB;
@@ -707,6 +724,10 @@ async function handleApi(context: PagesContext, pathname: string): Promise<Respo
 
   if (pathname === "/api/healthz" && method === "GET") {
     return json({ status: "ok" });
+  }
+  if (pathname === "/api/scale/latest" && method === "GET") {
+    const row = await db.prepare("SELECT weight_kg AS weightKg, received_at AS receivedAt FROM scale_latest WHERE id = 1").first<{weightKg: number; receivedAt: string}>();
+    return json(row ?? { weightKg: null, receivedAt: null });
   }
   if (pathname === "/api/summary" && method === "GET") return summary(db);
 
@@ -782,6 +803,9 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     }
     if (pathname === "/api/healthz" && method === "GET") {
       return json({ status: "ok" });
+    }
+    if (pathname === "/api/scale/weight" && method === "POST") {
+      return handleScaleWrite(context);
     }
     if (pathname.startsWith("/api/auth/")) {
       return await handleAuth(context, pathname, basePath);
