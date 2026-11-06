@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import type { Mixer } from '@workspace/api-client-react';
+import type { Mixer } from '@/api';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { kg } from '@/components/shared';

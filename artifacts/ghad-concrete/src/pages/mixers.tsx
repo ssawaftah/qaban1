@@ -4,8 +4,8 @@ import { Check, CircleCheck, Clock3, Pencil, Plus, RefreshCw, Trash2, Truck, X }
 import {
   getGetDashboardSummaryQueryKey, getListMixersQueryKey,
   useCreateMixer, useDeleteMixer, useListMixers, useUpdateMixer, useUpdateMixerTare,
-} from '@workspace/api-client-react';
-import type { Mixer } from '@workspace/api-client-react';
+} from '@/api';
+import type { Mixer } from '@/api';
 import { EmptyState, ErrorBox, kg, LoadingBlock, localDateInput, PageHeading, dateLabel, tareFreshness } from '@/components/shared';
 
 type FormState = { vehicleNumber: string; driverName: string; tareWeightKg: string; tareWeighedAt: string };

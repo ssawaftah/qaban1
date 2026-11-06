@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { setBaseUrl } from '@workspace/api-client-react';
+import { setBaseUrl } from '@/api';
 import { Building2, Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Toasts, type Notice, Shell } from '@/components/shared';
 import HomePage from '@/pages/home';
@@ -245,12 +243,11 @@ function AppContent() {
         <RoutedPages notify={notify} onLogout={() => void handleLogout()} />
       </WouterRouter>
       <Toasts notices={notices} dismiss={dismiss} />
-      <Toaster />
   </>;
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><AppContent /></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><AppContent /></QueryClientProvider>;
 }
 
 export default App;

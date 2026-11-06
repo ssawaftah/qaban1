@@ -4,8 +4,8 @@ import { Check, Filter, Pencil, RotateCcw, Search, Trash2, X } from 'lucide-reac
 import {
   getGetDashboardSummaryQueryKey, getListOperationsQueryKey,
   useDeleteOperation, useListMixers, useListOperations, useUpdateOperation,
-} from '@workspace/api-client-react';
-import type { ListOperationsParams, Operation } from '@workspace/api-client-react';
+} from '@/api';
+import type { ListOperationsParams, Operation } from '@/api';
 import { cubicMeters, EmptyState, ErrorBox, kg, LoadingBlock, localDateInput, PageHeading, dateLabel } from '@/components/shared';
 
 import { MixerSelect } from '@/components/mixer-select';

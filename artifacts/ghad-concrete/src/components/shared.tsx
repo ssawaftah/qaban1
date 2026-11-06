@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Activity, Archive, Building2, CalendarDays, ChevronLeft, CircleHelp, LogOut, ShieldCheck, Truck } from 'lucide-react';
-import type { Mixer } from '@workspace/api-client-react';
 
 export type Notice = { id: number; message: string; error?: boolean };
 
@@ -56,15 +55,8 @@ export function EmptyState({ title, detail }: { title: string; detail?: string }
   return <div className="empty-state" data-testid="status-empty"><div className="empty-mark"><CircleHelp size={21} /></div><strong>{title}</strong>{detail && <p>{detail}</p>}</div>;
 }
 
-export function MixerOption({ mixer }: { mixer: Mixer }) {
-  return <>{mixer.vehicleNumber} — {mixer.driverName}</>;
-}
-
 export function kg(value: number) {
   return new Intl.NumberFormat('ar-JO', { maximumFractionDigits: 0 }).format(value);
-}
-export function tonnes(value: number) {
-  return new Intl.NumberFormat('ar-JO', { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(value / 1000);
 }
 export const CONCRETE_DENSITY_KG_PER_M3 = 2330;
 export function cubicMeters(weightKg: number) {

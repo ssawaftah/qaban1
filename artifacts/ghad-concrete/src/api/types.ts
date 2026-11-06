@@ -1,0 +1,100 @@
+export interface Mixer {
+    id: number;
+    vehicleNumber: string;
+    driverName: string;
+    tareWeightKg: number;
+    tareWeighedAt: string;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface MixerInput {
+    /**
+       * @minLength 1
+       * @maxLength 30
+       */
+    vehicleNumber: string;
+    /**
+       * @minLength 1
+       * @maxLength 100
+       */
+    driverName: string;
+    /** @exclusiveMinimum 0 */
+    tareWeightKg: number;
+    tareWeighedAt: string;
+}
+export interface MixerUpdate {
+    /**
+       * @minLength 1
+       * @maxLength 30
+       */
+    vehicleNumber: string;
+    /**
+       * @minLength 1
+       * @maxLength 100
+       */
+    driverName: string;
+}
+export interface MixerTareInput {
+    /** @exclusiveMinimum 0 */
+    tareWeightKg: number;
+    tareWeighedAt: string;
+}
+export interface Operation {
+    id: number;
+    operationDate: string;
+    /** @nullable */
+    mixerId: number | null;
+    vehicleNumber: string;
+    driverName: string;
+    customerName: string;
+    grossWeightKg: number;
+    tareWeightKg: number;
+    concreteWeightKg: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface OperationInput {
+    operationDate: string;
+    mixerId: number;
+    /**
+       * @minLength 1
+       * @maxLength 150
+       */
+    customerName: string;
+    /** @exclusiveMinimum 0 */
+    grossWeightKg: number;
+}
+export interface OperationUpdate {
+    operationDate: string;
+    mixerId: number;
+    /**
+       * @minLength 1
+       * @maxLength 150
+       */
+    customerName: string;
+    /** @exclusiveMinimum 0 */
+    grossWeightKg: number;
+}
+export interface DashboardSummary {
+    todayOperationsCount: number;
+    todayConcreteKg: number;
+    totalOperationsCount: number;
+    totalConcreteKg: number;
+    mixerCount: number;
+    dueSoonTareCount: number;
+    overdueTareCount: number;
+}
+export type ListOperationsParams = {
+    dateFrom?: string;
+    dateTo?: string;
+    customerName?: string;
+    mixerId?: number;
+    vehicleNumber?: string;
+    driverName?: string;
+    grossMinKg?: number;
+    grossMaxKg?: number;
+    tareMinKg?: number;
+    tareMaxKg?: number;
+    concreteMinKg?: number;
+    concreteMaxKg?: number;
+};
