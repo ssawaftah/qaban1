@@ -1,7 +1,8 @@
+import { MixerSelect } from '@/components/mixer-select';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Check, RotateCcw, Scale, X } from 'lucide-react';
+import { ArrowUpLeft, Check, ClipboardList, Clock3, RotateCcw, Scale, Truck, Weight, X } from 'lucide-react';
 import {
   getGetDashboardSummaryQueryKey, getListMixersQueryKey, getListOperationsQueryKey,
   useCreateOperation, useGetDashboardSummary, useListMixers,
@@ -66,24 +67,24 @@ export default function HomePage({ notify }: { notify: (message: string, error?:
     });
   };
   return <>
-    <PageHeading title="حساب كمية المرتجع" />
+    <PageHeading title="الميزان المباشر" description="احسب كمية الخرسانة المرتجعة، واحفظ كل رحلة بدقة."><Link href="/archive" className="btn btn-secondary"><ClipboardList/>سجل العمليات<ArrowUpLeft/></Link></PageHeading>
     {mixersQuery.isError && <ErrorBox retry={() => void mixersQuery.refetch()} />}
     {summaryQuery.isError && <ErrorBox retry={() => void summaryQuery.refetch()} text="تعذّر تحميل ملخص التشغيل." />}
     {summaryQuery.isLoading ? <div className="stats-strip">{Array.from({ length: 4 }, (_, i) => <div className="stat" key={i}><div className="skeleton-line" /><div className="skeleton-line" /></div>)}</div> : summaryQuery.data && <section className="stats-strip" aria-label="ملخص التشغيل">
-      <div className="stat" data-testid="stat-today-count"><div className="stat-label">رحلات اليوم</div><div className="stat-value">{kg(summaryQuery.data.todayOperationsCount)}</div><div className="stat-note">عملية مسجلة</div></div>
-      <div className="stat" data-testid="stat-today-concrete"><div className="stat-label">مرتجع اليوم</div><div className="stat-value">{cubicMeters(summaryQuery.data.todayConcreteKg)} <small>م³</small></div></div>
-      <div className="stat" data-testid="stat-mixer-count"><div className="stat-label">الخلاطات المسجلة</div><div className="stat-value">{kg(summaryQuery.data.mixerCount)}</div><div className="stat-note">ضمن الأسطول</div></div>
-      <div className="stat" data-testid="stat-tare-alerts"><div className="stat-label">فحوصات وزن مستحقة</div><div className="stat-value">{mixersQuery.isLoading || mixersQuery.isError ? '—' : kg(tareDueSoonCount + tareOverdueCount)}</div><div className="stat-note">{mixersQuery.isLoading || mixersQuery.isError ? 'تعذّر احتساب الحالة' : `${kg(tareOverdueCount)} متأخرة · ${kg(tareDueSoonCount)} قريبة`}</div></div>
+      <div className="stat" data-testid="stat-today-count"><span className="stat-icon"><ClipboardList/></span><div className="stat-label">رحلات اليوم</div><div className="stat-value">{kg(summaryQuery.data.todayOperationsCount)}</div><div className="stat-note">عملية مسجلة</div></div>
+      <div className="stat" data-testid="stat-today-concrete"><span className="stat-icon"><Scale/></span><div className="stat-label">مرتجع اليوم</div><div className="stat-value">{cubicMeters(summaryQuery.data.todayConcreteKg)} <small>م³</small></div></div>
+      <div className="stat" data-testid="stat-mixer-count"><span className="stat-icon"><Truck/></span><div className="stat-label">الخلاطات المسجلة</div><div className="stat-value">{kg(summaryQuery.data.mixerCount)}</div><div className="stat-note">ضمن الأسطول</div></div>
+      <div className="stat" data-testid="stat-tare-alerts"><span className="stat-icon"><Clock3/></span><div className="stat-label">فحوصات وزن مستحقة</div><div className="stat-value">{mixersQuery.isLoading || mixersQuery.isError ? '—' : kg(tareDueSoonCount + tareOverdueCount)}</div><div className="stat-note">{mixersQuery.isLoading || mixersQuery.isError ? 'تعذّر احتساب الحالة' : `${kg(tareOverdueCount)} متأخرة · ${kg(tareDueSoonCount)} قريبة`}</div></div>
     </section>}
 
     <div className="grid calc-layout">
       <section className="panel">
-        <div className="panel-head"><div className="panel-title">بيانات الوزن</div></div>
+        <div className="panel-head"><div className="panel-heading-group"><span className="section-icon"><Scale/></span><div><div className="panel-title">بيانات الوزن</div><div className="panel-subtitle">اختر الخلاطة ثم أدخل الوزن القائم</div></div></div><span className="section-tag">عملية جديدة</span></div>
         <div className="panel-body">
           {mixersQuery.isLoading ? <LoadingBlock rows={3} /> : mixers.length === 0 ? <EmptyState title="لا توجد خلاطات" /> : <div className="grid field-grid">
-            <div className="field full"><label htmlFor="weigh-mixer">رقم الخلاطة</label><select id="weigh-mixer" className="control select-control" value={mixerId} onChange={(event) => { setMixerId(event.target.value); setValidation(''); }} data-testid="select-operation-mixer"><option value="">اختر الخلاطة</option>{mixers.map((mixer) => <option key={mixer.id} value={mixer.id}>{mixer.vehicleNumber} — {mixer.driverName} · فارغ {kg(mixer.tareWeightKg)} كغ</option>)}</select>{selectedMixer && <span className="field-hint">الوزن الفارغ: <b>{kg(selectedMixer.tareWeightKg)} كغ</b></span>}</div>
-            <div className="field"><label htmlFor="gross-weight">الوزن القائم <span className="field-hint">كغ</span></label><input id="gross-weight" type="number" min="1" step="1" inputMode="decimal" dir="ltr" className="control" value={gross} onChange={(event) => { setGross(event.target.value); setValidation(''); }} data-testid="input-gross-weight" /></div>
-            <div className="field"><label htmlFor="operation-date">التاريخ</label><input id="operation-date" type="date" className="control" value={date} onChange={(event) => setDate(event.target.value)} data-testid="input-operation-date" /></div>
+            <div className="field full"><label htmlFor="weigh-mixer"><span className="field-number">01</span>اختيار الخلاطة</label><MixerSelect id="weigh-mixer" testId="select-operation-mixer" value={mixerId} onChange={(value) => { setMixerId(value); setValidation(''); }} mixers={mixers} showTare />{selectedMixer && <span className="field-hint">الوزن الفارغ: <b>{kg(selectedMixer.tareWeightKg)} كغ</b></span>}</div>
+            <div className="field"><label htmlFor="gross-weight"><span className="field-number">02</span>الوزن القائم <span className="field-hint">كغ</span></label><input id="gross-weight" placeholder="0" type="number" min="1" step="1" inputMode="decimal" dir="ltr" className="control" value={gross} onChange={(event) => { setGross(event.target.value); setValidation(''); }} data-testid="input-gross-weight" /></div>
+            <div className="field"><label htmlFor="operation-date"><span className="field-number">03</span>تاريخ العملية</label><input id="operation-date" type="date" className="control" value={date} onChange={(event) => setDate(event.target.value)} data-testid="input-operation-date" /></div>
           </div>}
           {validation && <div className="error-box" role="alert" data-testid="status-validation">{validation}</div>}
           <div className="calc-equation" data-testid="text-calculation"><span>{gross && Number.isFinite(grossNumber) ? kg(grossNumber) : '—'}</span><span>−</span><span>{selectedMixer ? kg(selectedMixer.tareWeightKg) : '—'}</span><span>=</span><span>{netWeightKg ? kg(netWeightKg) : '—'} كغ</span><span>÷ 2330 =</span><strong>{netWeightKg ? cubicMeters(netWeightKg) : '—'} م³</strong></div>
@@ -96,13 +97,15 @@ export default function HomePage({ notify }: { notify: (message: string, error?:
       </section>
       <aside className="grid">
         <div className="result-card">
-          <div className="result-label">كمية المرتجع</div>
+          <div className="result-card-head"><span className="result-icon"><Scale size={20}/></span><span className="result-badge">نتيجة الحساب</span></div><div className="result-label">كمية الخرسانة المرتجعة</div>
           <div className="result-number" data-testid="text-concrete-weight">{netWeightKg > 0 ? cubicMeters(netWeightKg) : '—'}</div>
-          <div className="result-unit">متر مكعب</div>
+          <div className="result-unit">متر مكعب <span>m³</span></div>
           <hr className="result-rule" />
           <div className="result-tonnes"><span>فرق الوزن</span><strong data-testid="text-concrete-tonnes">{netWeightKg > 0 ? kg(netWeightKg) : '—'} كغ</strong></div>
         </div>
-        <div className="density-note">الكثافة المعتمدة: {kg(CONCRETE_DENSITY_KG_PER_M3)} كغ/م³</div>
+        <div className="density-note"><Weight size={18}/><div><strong>الكثافة المعتمدة</strong><span>{kg(CONCRETE_DENSITY_KG_PER_M3)} كغ لكل متر مكعب</span></div></div>
+        {selectedMixer && <div className="selected-mixer-card"><div className="panel-heading-group"><span className="section-icon"><Truck/></span><div><span className="panel-subtitle">الخلاطة المحددة</span><strong className="selected-plate">{selectedMixer.vehicleNumber}</strong></div></div><div className="detail-row"><span>السائق</span><strong>{selectedMixer.driverName}</strong></div><div className="detail-row"><span>الوزن الفارغ</span><strong>{kg(selectedMixer.tareWeightKg)} كغ</strong></div><span className={`status-pill ${tareFreshness(selectedMixer.tareWeighedAt).cls}`}>{tareFreshness(selectedMixer.tareWeighedAt).label}</span></div>}
+        <div className="workflow-note"><span>طريقة الحساب</span><p>الوزن القائم − الوزن الفارغ<br/>ثم قسمة فرق الوزن على الكثافة المعتمدة.</p></div>
       </aside>
     </div>
 

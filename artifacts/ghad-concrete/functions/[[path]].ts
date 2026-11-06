@@ -66,7 +66,7 @@ const notFound = (message: string) => json({ error: message }, 404);
 const conflict = (message: string) => json({ error: message }, 409);
 const serverError = (message: string) => json({ error: message }, 500);
 
-const SESSION_COOKIE = "ghad_session";
+const SESSION_COOKIE = "ghad_session_v2";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const LOGIN_FAILURE_LIMIT = 5;
 const LOGIN_LOCK_SECONDS = 15 * 60;
@@ -127,7 +127,7 @@ function cookiePath(basePath: string): string {
 function setSessionCookie(response: Response, token: string, basePath: string): Response {
   response.headers.set(
     "set-cookie",
-    `${SESSION_COOKIE}=${token}; Path=${cookiePath(basePath)}; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`,
+    `${SESSION_COOKIE}=${token}; Path=${cookiePath(basePath)}; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=None; Partitioned`,
   );
   return response;
 }
@@ -135,7 +135,7 @@ function setSessionCookie(response: Response, token: string, basePath: string): 
 function clearSessionCookie(response: Response, basePath: string): Response {
   response.headers.set(
     "set-cookie",
-    `${SESSION_COOKIE}=; Path=${cookiePath(basePath)}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`,
+    `${SESSION_COOKIE}=; Path=${cookiePath(basePath)}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=None; Partitioned`,
   );
   return response;
 }
@@ -771,6 +771,15 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   }
   try {
     const method = context.request.method.toUpperCase();
+    // Embedded Sites need cross-site cookies. Keep browser writes same-origin.
+    if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+      const origin = context.request.headers.get("origin");
+      const expectedOrigin = new URL(context.request.url).origin;
+      if ((origin !== null && origin !== expectedOrigin) ||
+          context.request.headers.get("sec-fetch-site") === "cross-site") {
+        return json({ error: "مصدر الطلب غير مسموح." }, 403);
+      }
+    }
     if (pathname === "/api/healthz" && method === "GET") {
       return json({ status: "ok" });
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { Check, CircleCheck, Clock3, Pencil, Plus, RefreshCw, Trash2, Truck, X } from 'lucide-react';
 import {
   getGetDashboardSummaryQueryKey, getListMixersQueryKey,
   useCreateMixer, useDeleteMixer, useListMixers, useUpdateMixer, useUpdateMixerTare,
@@ -59,19 +59,24 @@ export default function MixersPage({ notify }: { notify: (message: string, error
     });
   };
   return <>
-    <PageHeading title="إدارة الخلاطات">
+    <PageHeading title="إدارة الخلاطات" description="بيانات الأسطول والسائقين، ومتابعة حداثة الوزن الفارغ.">
       <button type="button" className="btn btn-primary" onClick={openCreate} data-testid="button-add-mixer"><Plus />إضافة خلاطة</button>
     </PageHeading>
+    {query.data && <section className="stats-strip fleet-stats" aria-label="ملخص الأسطول">
+      <div className="stat"><span className="stat-icon"><Truck/></span><div className="stat-label">إجمالي الأسطول</div><div className="stat-value">{kg(query.data.length)}</div><div className="stat-note">خلاطة مسجلة</div></div>
+      <div className="stat"><span className="stat-icon"><CircleCheck/></span><div className="stat-label">أوزان حديثة</div><div className="stat-value">{kg(query.data.filter((mixer) => tareFreshness(mixer.tareWeighedAt).age <= 30).length)}</div><div className="stat-note">تم القياس خلال ٣٠ يومًا</div></div>
+      <div className="stat"><span className="stat-icon"><Clock3/></span><div className="stat-label">تحتاج متابعة الوزن</div><div className="stat-value">{kg(query.data.filter((mixer) => tareFreshness(mixer.tareWeighedAt).age > 30).length)}</div><div className="stat-note">أوزان قريبة من التحديث أو متأخرة</div></div>
+    </section>}
     <section className="panel">
       <div className="panel-head"><div className="panel-title">الخلاطات المسجلة{query.data ? ` · ${kg(query.data.length)}` : ''}</div>
-        <div className="legend" aria-label="دليل حداثة الوزن"><span className="legend-item"><i className="legend-dot" style={{background:'#4d9a70'}}/>حديث · حتى ٣٠ يوماً</span><span className="legend-item"><i className="legend-dot" style={{background:'#d49a37'}}/>قريب · ٣١–٨٩ يوماً</span><span className="legend-item"><i className="legend-dot" style={{background:'#bc5a4e'}}/>متأخر · ٩٠ يوماً فأكثر</span></div>
+        <div className="legend" aria-label="دليل حداثة الوزن"><span className="legend-item"><i className="legend-dot" style={{background:'#059669'}}/>حديث · حتى ٣٠ يوماً</span><span className="legend-item"><i className="legend-dot" style={{background:'#d97706'}}/>قريب · ٣١–٨٩ يوماً</span><span className="legend-item"><i className="legend-dot" style={{background:'#e11d48'}}/>متأخر · ٩٠ يوماً فأكثر</span></div>
       </div>
       {query.isError && <div style={{padding:18}}><ErrorBox retry={() => void query.refetch()} /></div>}
-      {query.isLoading ? <div className="panel-body"><LoadingBlock rows={4}/></div> : query.data && query.data.length === 0 ? <EmptyState title="لا توجد خلاطات" /> : query.data && <div className="table-wrap"><table><thead><tr><th>رقم المركبة</th><th>السائق</th><th>الوزن الفارغ</th><th>آخر قياس</th><th>حداثة الوزن</th><th>الإجراءات</th></tr></thead><tbody>
+      {query.isLoading ? <div className="panel-body"><LoadingBlock rows={4}/></div> : query.data && query.data.length === 0 ? <div className="fleet-empty"><EmptyState title="ابدأ بإضافة خلاطات الشركة" detail="سجّل رقم المركبة والسائق والوزن الفارغ لتبدأ حساب المرتجعات." /><button type="button" className="btn btn-primary" onClick={openCreate}><Plus/>إضافة أول خلاطة</button></div> : query.data && <div className="table-wrap" role="region" aria-label="جدول خلاطات الشركة" tabIndex={0}><table><thead><tr><th>رقم المركبة</th><th>السائق</th><th>الوزن الفارغ</th><th>آخر قياس</th><th>حداثة الوزن</th><th>الإجراءات</th></tr></thead><tbody>
         {query.data.map((mixer) => {
           const state = tareFreshness(mixer.tareWeighedAt);
           return <tr key={mixer.id} data-testid={`row-mixer-${mixer.id}`}>
-            <td><strong data-testid={`text-vehicle-${mixer.id}`}>{mixer.vehicleNumber}</strong></td><td>{mixer.driverName}</td>
+            <td><strong className="plate-number" data-testid={`text-vehicle-${mixer.id}`}>{mixer.vehicleNumber}</strong></td><td>{mixer.driverName}</td>
             <td><span className="mono" data-testid={`text-tare-${mixer.id}`}>{kg(mixer.tareWeightKg)} كغ</span></td><td className="muted">{dateLabel(mixer.tareWeighedAt)}</td>
             <td><span className={`status-pill ${state.cls}`} data-testid={`status-tare-${mixer.id}`}>{state.label} · {kg(state.age)} يوم</span></td>
             <td><div className="row-actions"><button type="button" className="icon-btn" title="تعديل البيانات" aria-label={`تعديل ${mixer.vehicleNumber}`} onClick={() => openEdit(mixer)} data-testid={`button-edit-mixer-${mixer.id}`}><Pencil/></button><button type="button" className="icon-btn" title="تحديث الوزن الفارغ" aria-label={`تحديث وزن ${mixer.vehicleNumber}`} onClick={() => openTare(mixer)} data-testid={`button-update-tare-${mixer.id}`}><RefreshCw/></button><button type="button" className="icon-btn danger" title="حذف الخلاطة" aria-label={`حذف ${mixer.vehicleNumber}`} onClick={() => { setSelected(mixer); setError(''); setDialog('delete'); }} data-testid={`button-delete-mixer-${mixer.id}`}><Trash2/></button></div></td>
