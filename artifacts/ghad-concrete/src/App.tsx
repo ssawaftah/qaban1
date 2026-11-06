@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setBaseUrl } from '@workspace/api-client-react';
-import { Archive, Building2, Eye, EyeOff, LockKeyhole, Scale, ShieldCheck, Truck } from 'lucide-react';
+import { Building2, Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -93,11 +93,6 @@ function LoginPage({
   };
 
   return <main className="login-screen" dir="rtl">
-    <aside className="login-showcase" aria-label="نظام الغد للباطون الجاهز">
-      <div className="brand"><div className="brand-mark"><Building2/></div><div><div className="brand-title">الغد</div><div className="brand-subtitle">للباطون الجاهز</div></div></div>
-      <div><h2>كل رحلة محسوبة.<br/><span>وكل تفصيل في مكانه.</span></h2><p>مساحة عمل واحدة لإدارة وزن الخرسانة المرتجعة، ومتابعة الأسطول، وأرشفة العمليات.</p><div className="showcase-modules"><span><Scale/>الميزان المباشر</span><span><Archive/>أرشيف العمليات</span><span><Truck/>إدارة الخلاطات</span></div></div>
-      <div className="showcase-footer"><span>الغد للباطون الجاهز</span><span>إدارة المرتجعات والوزن</span></div>
-    </aside>
     <section className="login-card" aria-labelledby="login-title">
       <div className="login-brand">
         <div className="brand-mark"><Building2/></div>
