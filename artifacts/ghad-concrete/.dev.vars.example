@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local use only. Never commit credentials.
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
+APP_BASE_PATH=

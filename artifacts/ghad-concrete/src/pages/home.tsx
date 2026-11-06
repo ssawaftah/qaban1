@@ -6,7 +6,7 @@ import { ArrowUpLeft, Check, ClipboardList, Clock3, RotateCcw, Scale, Truck, Wei
 import {
   getGetDashboardSummaryQueryKey, getListMixersQueryKey, getListOperationsQueryKey,
   useCreateOperation, useGetDashboardSummary, useListMixers,
-} from '@workspace/api-client-react';
+} from '@/api';
 import { CONCRETE_DENSITY_KG_PER_M3, cubicMeters, EmptyState, ErrorBox, kg, LoadingBlock, localDateInput, PageHeading, tareFreshness } from '@/components/shared';
 
 export default function HomePage({ notify }: { notify: (message: string, error?: boolean) => void }) {
