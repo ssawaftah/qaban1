@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Activity, Archive, CalendarDays, CircleHelp, LogOut, Truck } from 'lucide-react';
+import { Activity, Archive, Building2, CalendarDays, ChevronLeft, CircleHelp, LogOut, ShieldCheck, Truck } from 'lucide-react';
 import type { Mixer } from '@workspace/api-client-react';
 
 export type Notice = { id: number; message: string; error?: boolean };
@@ -24,21 +24,24 @@ export function Shell({ children, onLogout }: { children: ReactNode; onLogout: (
     { href: '/mixers', label: 'إدارة الخلاطات', Icon: Truck },
   ];
   const today = new Intl.DateTimeFormat('ar-JO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  const currentPage = links.find((link) => link.href === path)?.label ?? 'لوحة التشغيل';
   return <div className="app-shell" dir="rtl">
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark">غ</div><div className="brand-title">الغد للباطون الجاهز</div></div>
-      <nav className="nav-list" aria-label="التنقل الرئيسي">{links.map(({ href, label, Icon }) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} data-testid={`link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span></Link>)}</nav>
+      <Link href="/" className="brand" aria-label="الغد للباطون الجاهز — الرئيسية"><div className="brand-mark"><Building2 /></div><div><div className="brand-title">الغد</div><div className="brand-subtitle">للباطون الجاهز</div></div></Link>
+      <div className="sidebar-section-label">مساحة العمل</div>
+      <nav className="nav-list" aria-label="التنقل الرئيسي">{links.map(({ href, label, Icon }, index) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} aria-current={path === href ? 'page' : undefined} data-testid={`link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span><span className="nav-index">0{index + 1}</span></Link>)}</nav>
+      <div className="sidebar-bottom"><div className="workspace-card"><div className="workspace-avatar"><Building2 size={19}/></div><div><strong>نظام إدارة المرتجعات</strong><span>الغد للباطون الجاهز</span></div></div><button type="button" className="sidebar-logout" onClick={onLogout}><LogOut size={17}/>تسجيل الخروج<ChevronLeft size={15}/></button></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div><div className="topbar-title">{path === '/' ? 'حساب المرتجع' : path === '/archive' ? 'أرشيف المرتجعات' : 'إدارة الخلاطات'}</div></div><div className="topbar-actions"><div className="today-chip"><CalendarDays />{today}</div><button type="button" className="btn btn-secondary logout-btn" onClick={onLogout} aria-label="تسجيل الخروج"><LogOut /><span>خروج</span></button></div></header>
-      <div className="content fade-in">{children}</div>
+      <header className="topbar"><div className="breadcrumb"><span>إدارة العمليات</span><ChevronLeft size={14}/><strong>{currentPage}</strong></div><div className="topbar-actions"><div className="today-chip"><CalendarDays />{today}</div><div className="account-chip" title="حساب إدارة الشركة"><ShieldCheck size={17}/><span>الإدارة</span></div><button type="button" className="icon-btn mobile-logout" onClick={onLogout} aria-label="تسجيل الخروج"><LogOut/></button></div></header>
+      <div className="content fade-in">{children}<footer className="app-footer"><span>الغد للباطون الجاهز</span><span>نظام إدارة المرتجعات والوزن</span></footer></div>
     </main>
-    <nav className="mobile-nav" aria-label="التنقل">{links.map(({ href, label, Icon }) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} data-testid={`mobile-link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span></Link>)}</nav>
+    <nav className="mobile-nav" aria-label="التنقل">{links.map(({ href, label, Icon }) => <Link key={href} href={href} className={`nav-link${path === href ? ' active' : ''}`} aria-current={path === href ? 'page' : undefined} data-testid={`mobile-link-${href === '/' ? 'weighing' : href.slice(1)}`}><Icon /><span>{label}</span></Link>)}</nav>
   </div>;
 }
 
-export function PageHeading({ title, children }: { title: string; children?: ReactNode }) {
-  return <div className="page-heading"><h1>{title}</h1>{children}</div>;
+export function PageHeading({ title, description, children }: { title: string; description?: string; children?: ReactNode }) {
+  return <div className="page-heading"><div><div className="page-eyebrow">إدارة المرتجعات</div><h1>{title}</h1>{description && <p className="page-description">{description}</p>}</div>{children && <div className="heading-actions">{children}</div>}</div>;
 }
 
 export function ErrorBox({ retry, text = 'تعذّر تحميل البيانات من الخادم.' }: { retry: () => void; text?: string }) {

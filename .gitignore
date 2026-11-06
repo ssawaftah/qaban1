@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+.dev.vars*
+.wrangler/
+worker/assets.generated.ts

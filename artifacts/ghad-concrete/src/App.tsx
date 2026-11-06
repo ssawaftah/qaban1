@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setBaseUrl } from '@workspace/api-client-react';
-import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import { Archive, Building2, Eye, EyeOff, LockKeyhole, Scale, ShieldCheck, Truck } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -65,6 +65,17 @@ function LoginPage({
       });
       const result = await response.json().catch(() => null) as { error?: string } | null;
       if (response.ok) {
+        const session = await fetch(`${appBase}/api/auth/session`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        const status = await session.json().catch(() => null) as { authenticated?: boolean } | null;
+        if (!session.ok || !status?.authenticated) {
+          setError(session.status === 401
+            ? 'تعذّر حفظ جلسة الدخول في المتصفح. افتح النظام في علامة تبويب مستقلة ثم أعد المحاولة.'
+            : 'تعذّر التحقق من جلسة الدخول. حاول مرة أخرى.');
+          return;
+        }
         setPassword('');
         onSuccess();
       } else if (response.status === 401) {
@@ -82,18 +93,23 @@ function LoginPage({
   };
 
   return <main className="login-screen" dir="rtl">
+    <aside className="login-showcase" aria-label="نظام الغد للباطون الجاهز">
+      <div className="brand"><div className="brand-mark"><Building2/></div><div><div className="brand-title">الغد</div><div className="brand-subtitle">للباطون الجاهز</div></div></div>
+      <div><h2>كل رحلة محسوبة.<br/><span>وكل تفصيل في مكانه.</span></h2><p>مساحة عمل واحدة لإدارة وزن الخرسانة المرتجعة، ومتابعة الأسطول، وأرشفة العمليات.</p><div className="showcase-modules"><span><Scale/>الميزان المباشر</span><span><Archive/>أرشيف العمليات</span><span><Truck/>إدارة الخلاطات</span></div></div>
+      <div className="showcase-footer"><span>الغد للباطون الجاهز</span><span>إدارة المرتجعات والوزن</span></div>
+    </aside>
     <section className="login-card" aria-labelledby="login-title">
       <div className="login-brand">
-        <div className="brand-mark">غ</div>
+        <div className="brand-mark"><Building2/></div>
         <div className="brand-title">الغد للباطون الجاهز</div>
       </div>
       <div className="login-heading">
         <div className="login-icon"><LockKeyhole size={19} /></div>
-        <h1 id="login-title">تسجيل الدخول</h1>
+        <h1 id="login-title">مرحبًا بعودتك</h1><p>سجّل الدخول إلى مساحة عمل الشركة.</p>
       </div>
 
       {setupError && <div className="login-alert" role="alert">
-        إعداد الدخول غير مكتمل. أضف متغيرَي <bdi>ADMIN_USERNAME</bdi> و<bdi>ADMIN_PASSWORD</bdi> في إعدادات Cloudflare Pages.
+        إعداد الدخول غير مكتمل. يرجى التواصل مع مسؤول النظام.
       </div>}
       {serviceError && <div className="login-alert" role="alert">
         تعذّر التحقق من جلسة الدخول. تحقق من الاتصال ثم أعد المحاولة.
@@ -144,7 +160,7 @@ function LoginPage({
           {busy ? 'جارٍ التحقق…' : 'دخول إلى النظام'}
         </button>
       </form>
-      {serviceError && <button type="button" className="login-retry" onClick={onRetry}>إعادة المحاولة</button>}
+      {serviceError && <button type="button" className="login-retry" onClick={onRetry}>إعادة المحاولة</button>}<div className="login-security-note"><ShieldCheck size={14}/>دخول خاص بفريق إدارة الشركة</div>
     </section>
   </main>;
 }
