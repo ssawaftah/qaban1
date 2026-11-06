@@ -16,6 +16,25 @@ export default function HomePage({ notify }: { notify: (message: string, error?:
   const createOperation = useCreateOperation();
   const [mixerId, setMixerId] = useState('');
   const [gross, setGross] = useState('');
+  const [scaleLoading, setScaleLoading] = useState(false);
+  const [scaleMessage, setScaleMessage] = useState('');
+  const readScale = async () => {
+    if (scaleLoading) return;
+    setScaleLoading(true);
+    setScaleMessage('');
+    try {
+      const response = await fetch('/api/scale/latest', { credentials: 'include', cache: 'no-store' });
+      if (!response.ok) throw new Error('connection');
+      const data: { weightKg: number | null; receivedAt: string | null } = await response.json();
+      if (typeof data.weightKg !== 'number' || !data.receivedAt) { setScaleMessage('لا توجد قراءة من القبان بعد.'); return; }
+      const age = Date.now() - Date.parse(data.receivedAt);
+      if (!Number.isFinite(age) || age < -30000 || age > 15000) { setScaleMessage('قراءة القبان قديمة؛ تأكدي من اتصال البرنامج.'); return; }
+      setGross(String(data.weightKg));
+      setValidation('');
+      setScaleMessage('تم جلب الوزن من القبان. يمكنك تعديله يدويًا.');
+    } catch { setScaleMessage('تعذر الاتصال بالقبان. يمكنك إدخال الوزن يدويًا.'); }
+    finally { setScaleLoading(false); }
+  };
   const [date, setDate] = useState(localDateInput());
   const [customer, setCustomer] = useState('');
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -83,7 +102,7 @@ export default function HomePage({ notify }: { notify: (message: string, error?:
         <div className="panel-body">
           {mixersQuery.isLoading ? <LoadingBlock rows={3} /> : mixers.length === 0 ? <EmptyState title="لا توجد خلاطات" /> : <div className="grid field-grid">
             <div className="field full"><label htmlFor="weigh-mixer"><span className="field-number">01</span>اختيار الخلاطة</label><MixerSelect id="weigh-mixer" testId="select-operation-mixer" value={mixerId} onChange={(value) => { setMixerId(value); setValidation(''); }} mixers={mixers} showTare />{selectedMixer && <span className="field-hint">الوزن الفارغ: <b>{kg(selectedMixer.tareWeightKg)} كغ</b></span>}</div>
-            <div className="field"><label htmlFor="gross-weight"><span className="field-number">02</span>الوزن القائم <span className="field-hint">كغ</span></label><input id="gross-weight" placeholder="0" type="number" min="1" step="1" inputMode="decimal" dir="ltr" className="control" value={gross} onChange={(event) => { setGross(event.target.value); setValidation(''); }} data-testid="input-gross-weight" /></div>
+            <div className="field"><label htmlFor="gross-weight"><span className="field-number">02</span>الوزن القائم <span className="field-hint">كغ</span></label><input id="gross-weight" placeholder="0" type="number" min="1" step="1" inputMode="decimal" dir="ltr" className="control" value={gross} onChange={(event) => { setGross(event.target.value); setValidation(''); setScaleMessage(''); }} data-testid="input-gross-weight" /><button type="button" className="btn btn-secondary" onClick={() => void readScale()} disabled={scaleLoading} data-testid="button-read-scale"><Scale />{scaleLoading ? 'جارٍ القراءة…' : 'قراءة الوزن من القبان'}</button>{scaleMessage && <span className="field-hint" role="status">{scaleMessage}</span>}</div>
             <div className="field"><label htmlFor="operation-date"><span className="field-number">03</span>تاريخ العملية</label><input id="operation-date" type="date" className="control" value={date} onChange={(event) => setDate(event.target.value)} data-testid="input-operation-date" /></div>
           </div>}
           {validation && <div className="error-box" role="alert" data-testid="status-validation">{validation}</div>}
