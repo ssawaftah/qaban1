@@ -28,7 +28,7 @@ export default function HomePage({ notify }: { notify: (message: string, error?:
       const data: { weightKg: number | null; receivedAt: string | null } = await response.json();
       if (typeof data.weightKg !== 'number' || !data.receivedAt) { setScaleMessage('لا توجد قراءة من القبان بعد.'); return; }
       const age = Date.now() - Date.parse(data.receivedAt);
-      if (!Number.isFinite(age) || age < -30000 || age > 15000) { setScaleMessage('قراءة القبان قديمة؛ تأكدي من اتصال البرنامج.'); return; }
+      if (!Number.isFinite(age) || age < -30000 || age > 15000) { setScaleMessage('قراءة القبان قديمة؛ تأكد من اتصال البرنامج.'); return; }
       setGross(String(data.weightKg));
       setValidation('');
       setScaleMessage('تم جلب الوزن من القبان. يمكنك تعديله يدويًا.');
