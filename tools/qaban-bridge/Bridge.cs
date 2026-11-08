@@ -16,7 +16,7 @@ using System.Collections.Generic;
 [assembly: System.Reflection.AssemblyTitle("قبان الغد")]
 [assembly: System.Reflection.AssemblyProduct("قبان الغد")]
 [assembly: System.Reflection.AssemblyDescription("قبان الغد")]
-[assembly: System.Reflection.AssemblyVersion("0.9.0.0")]
+[assembly: System.Reflection.AssemblyVersion("0.9.1.0")]
 
 namespace WeighbridgeBridge {
  public static class Protocol {
@@ -63,7 +63,7 @@ namespace WeighbridgeBridge {
  public sealed partial class MainForm:Form {
   TextBox port=new TextBox(),endpoint=new TextBox(),company=new TextBox(),marker=new TextBox(),token=new TextBox(),returnsEndpoint=new TextBox(),returnsToken=new TextBox();
   NumericUpDown baud=new NumericUpDown(),bits=new NumericUpDown(),interval=new NumericUpDown(),fresh=new NumericUpDown();
-  ComboBox parity=new ComboBox(); CheckBox enableSend=new CheckBox(),enableReturns=new CheckBox();
+  ComboBox parity=new ComboBox(); CheckBox enableSend=new CheckBox();
   Button start=new Button(),stop=new Button(),save=new Button();
   Label weight=new Label(),serialState=new Label(),httpState=new Label(),age=new Label();
   TextBox log=new TextBox(); TableLayoutPanel fields=new TableLayoutPanel();
@@ -75,10 +75,10 @@ namespace WeighbridgeBridge {
   readonly OutputChannel primary,returns;
   public MainForm() {
    primary=new OutputChannel(OutputKind.Primary,"الأساسي",()=>clock.ElapsedMilliseconds,WriteLog,SaveReply);
-   returns=new OutputChannel(OutputKind.Returns,"المرتجعات",()=>clock.ElapsedMilliseconds,WriteLog,SaveReply);
+   returns=new OutputChannel(OutputKind.Returns,"القناة الثانية",()=>clock.ElapsedMilliseconds,WriteBackgroundLog,SaveReply);
    BuildInterface();
    settings=LoadSettings();
-   try{if(Bootstrap.Import(Application.StartupPath,Path.Combine(dataDir,"settings.json"),settings))WriteLog("تم تجهيز ربط المرتجعات.");}catch(Exception ex){WriteLog("تعذر استيراد ربط المرتجعات: "+ex.GetType().Name);}
+   try{if(Bootstrap.Import(Application.StartupPath,Path.Combine(dataDir,"settings.json"),settings))WriteBackgroundLog("تم تجهيز الربط.");}catch(Exception ex){WriteBackgroundLog("تعذر استيراد الربط: "+ex.GetType().Name);}
    Apply(settings);
    start.Click+=(s,e)=>StartReading();stop.Click+=(s,e)=>StopReading();
    save.Click+=(s,e)=>{try{var cfg=ReadSettings();Directory.CreateDirectory(dataDir);File.WriteAllText(Path.Combine(dataDir,"settings.json"),new JavaScriptSerializer().Serialize(cfg),Encoding.UTF8);WriteLog("تم حفظ الإعدادات؛ رموز الربط مشفرة لحساب Windows الحالي.");}catch(Exception ex){MessageBox.Show(ex.Message);}};
@@ -88,10 +88,10 @@ namespace WeighbridgeBridge {
   static FlowLayoutPanel Row(params Control[] controls){var p=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,WrapContents=true};foreach(var c in controls)p.Controls.Add(c);return p;}
   void AddField(string text,Control c){int r=fields.RowCount++;fields.RowStyles.Add(new RowStyle(SizeType.Absolute,34));fields.Controls.Add(new Label{Text=text,AutoSize=true,Anchor=AnchorStyles.Right},0,r);c.Dock=DockStyle.Fill;fields.Controls.Add(c,1,r);}
   Settings LoadSettings(){try{string f=Path.Combine(dataDir,"settings.json");if(File.Exists(f))return new JavaScriptSerializer().Deserialize<Settings>(File.ReadAllText(f))??new Settings();}catch{ }return new Settings();}
-  void Apply(Settings c){port.Text=c.Port;endpoint.Text=c.Endpoint;company.Text=c.Company;marker.Text=c.ResponseMarker;baud.Value=Clamp(c.Baud,300,115200);bits.Value=Clamp(c.DataBits,5,8);interval.Value=1000;fresh.Value=Clamp(c.Freshness,1000,30000);returnsEndpoint.Text=c.ReturnsEndpoint;returnsToken.Text=LocalSecrets.Unprotect(c.ReturnsTokenProtected);token.Text=LocalSecrets.Unprotect(c.PrimaryTokenProtected);enableReturns.Checked=c.ReturnsEnabled;parity.SelectedItem=c.Parity;if(parity.SelectedIndex<0)parity.SelectedIndex=0;}
+  void Apply(Settings c){port.Text=c.Port;endpoint.Text=c.Endpoint;company.Text=c.Company;marker.Text=c.ResponseMarker;baud.Value=Clamp(c.Baud,300,115200);bits.Value=Clamp(c.DataBits,5,8);interval.Value=1000;fresh.Value=Clamp(c.Freshness,1000,30000);returnsEndpoint.Text=c.ReturnsEndpoint;returnsToken.Text=LocalSecrets.Unprotect(c.ReturnsTokenProtected);token.Text=LocalSecrets.Unprotect(c.PrimaryTokenProtected);parity.SelectedItem=c.Parity;if(parity.SelectedIndex<0)parity.SelectedIndex=0;}
   static int Clamp(int v,int min,int max){return Math.Max(min,Math.Min(max,v));}
   Settings ReadSettings(){
-   var c=new Settings{Port=port.Text.Trim(),Baud=(int)baud.Value,DataBits=(int)bits.Value,Parity=parity.Text,Endpoint=endpoint.Text.Trim(),Company=company.Text.Trim(),Interval=(int)interval.Value,Freshness=(int)fresh.Value,ResponseMarker=marker.Text,ReturnsEndpoint=returnsEndpoint.Text.Trim(),ReturnsEnabled=enableReturns.Checked,ReturnsTokenProtected=LocalSecrets.Protect(returnsToken.Text),PrimaryTokenProtected=LocalSecrets.Protect(token.Text)};
+   var c=new Settings{Port=port.Text.Trim(),Baud=(int)baud.Value,DataBits=(int)bits.Value,Parity=parity.Text,Endpoint=endpoint.Text.Trim(),Company=company.Text.Trim(),Interval=(int)interval.Value,Freshness=(int)fresh.Value,ResponseMarker=marker.Text,ReturnsEndpoint=returnsEndpoint.Text.Trim(),ReturnsEnabled=true,ReturnsTokenProtected=LocalSecrets.Protect(returnsToken.Text),PrimaryTokenProtected=LocalSecrets.Protect(token.Text)};
    if(!Regex.IsMatch(c.Port,@"^COM\d+$",RegexOptions.IgnoreCase))throw new Exception("أدخلي منفذًا مثل COM6.");
    if(!Regex.IsMatch(c.Company,@"^\d+$"))throw new Exception("رقم الشركة يجب أن يكون أرقامًا.");
    Uri u;if(!Uri.TryCreate(c.Endpoint,UriKind.Absolute,out u)||u.Scheme!="https"||u.UserInfo!=""||u.Fragment!=""||u.Query!="")throw new Exception("عنوان الإرسال يجب أن يكون HTTPS دون كلمة مرور أو معاملات إضافية.");
@@ -100,11 +100,12 @@ namespace WeighbridgeBridge {
   void StartReading(){
    try{settings=ReadSettings();if(enableSend.Checked&&MessageBox.Show("سيُرسل وزن الميزان الحقيقي إلى:\n"+settings.Endpoint+"\nالشركة: "+settings.Company+"\nهل تأكدتِ من الوجهة وأغلقتِ برنامج الإرسال القديم؟","تفعيل الإرسال",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
     primary.Configure(settings.Endpoint,token.Text,settings.Company,settings.Freshness);returns.Configure(settings.ReturnsEndpoint,returnsToken.Text,settings.Company,settings.Freshness);
-    running=true;received=-1;frames=new Frames();nextOpen=0;fields.Enabled=false;enableSend.Enabled=false;enableReturns.Enabled=false;start.Enabled=false;stop.Enabled=true;save.Enabled=false;weight.Text="— kg";httpState.Text=enableSend.Checked?"الإرسال: بانتظار قراءة حديثة":"الإرسال: مراقبة فقط";WriteLog("بدء القراءة "+settings.Port+" / "+settings.Baud+" / "+settings.DataBits+" / "+settings.Parity+" / StopBits.One");
+    running=true;received=-1;frames=new Frames();nextOpen=0;fields.Enabled=false;enableSend.Enabled=false;start.Enabled=false;stop.Enabled=true;save.Enabled=false;weight.Text="— kg";httpState.Text=enableSend.Checked?"الإرسال: بانتظار قراءة حديثة":"الإرسال: مراقبة فقط";WriteLog("بدء القراءة "+settings.Port+" / "+settings.Baud+" / "+settings.DataBits+" / "+settings.Parity+" / StopBits.One");
    }catch(Exception ex){MessageBox.Show(ex.Message);}
   }
-  void StopReading(){running=false;received=-1;primary.Stop();returns.Stop();CloseSerial();fields.Enabled=true;enableSend.Enabled=true;enableReturns.Enabled=true;start.Enabled=true;stop.Enabled=false;save.Enabled=true;serialState.Text="الميزان: متوقف";httpState.Text="الإرسال: متوقف";weight.Text="— kg";}
+  void StopReading(){running=false;received=-1;primary.Stop();returns.Stop();CloseSerial();fields.Enabled=true;enableSend.Enabled=true;start.Enabled=true;stop.Enabled=false;save.Enabled=true;serialState.Text="الميزان: متوقف";httpState.Text="الإرسال: متوقف";weight.Text="— kg";}
   void CloseSerial(){if(serial!=null){try{serial.Close();serial.Dispose();}catch{ }serial=null;}}
+  void WriteBackgroundLog(string msg){try{Directory.CreateDirectory(dataDir);string f=Path.Combine(dataDir,"background.log");if(File.Exists(f)&&new FileInfo(f).Length>2*1024*1024)File.Delete(f);File.AppendAllText(f,DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")+" "+msg+Environment.NewLine,Encoding.UTF8);}catch{ }}
   void WriteLog(string msg){string line=DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")+" "+msg;if(log.TextLength>50000)log.Text=log.Text.Substring(log.TextLength-25000);log.AppendText(line+Environment.NewLine);try{Directory.CreateDirectory(dataDir);string f=Path.Combine(dataDir,"bridge.log");if(File.Exists(f)&&new FileInfo(f).Length>2*1024*1024){string old=f+".1";if(File.Exists(old))File.Delete(old);File.Move(f,old);}File.AppendAllText(f,line+Environment.NewLine,Encoding.UTF8);}catch{ }}
   void Tick(object sender,EventArgs e){
    if(!running)return;
@@ -115,7 +116,7 @@ namespace WeighbridgeBridge {
    age.Text=received<0?"لا توجد قراءة صالحة":("عمر القراءة: "+((now-received)/1000.0).ToString("0.0")+" ثانية");
    if(!recent){weight.Text="— kg";if(received>=0)serialState.Text="الميزان: توقفت القراءات";if(enableSend.Checked&&!primary.Busy)httpState.Text="الإرسال: متوقف حتى تصل قراءة حديثة";}
    primary.Pump(now,enableSend.Checked,received,sampledAtUtc,latest);
-   returns.Pump(now,enableReturns.Checked,received,sampledAtUtc,latest);
+   returns.Pump(now,enableSend.Checked,received,sampledAtUtc,latest);
   }
   void SaveReply(ApiReply reply,string name){try{Directory.CreateDirectory(dataDir);File.WriteAllText(Path.Combine(dataDir,name),"HTTP "+reply.StatusCode+Environment.NewLine+(reply.Body??""),Encoding.UTF8);}catch{ }}
  }
