@@ -122,6 +122,7 @@ namespace WeighbridgeBridge {
      for(int i=0;i<codes.Length;i++){
       var context=await listener.GetContextAsync();
       string requestBody;using(var reader=new StreamReader(context.Request.InputStream))requestBody=await reader.ReadToEndAsync();
+      Check(context.Request.UserAgent=="QabanAlGhad/0.9","application identity "+i);
       Check(context.Request.HttpMethod=="POST","transport POST "+i);
       Check(context.Request.ContentType=="application/json","transport content type "+i);
       Check(context.Request.AcceptTypes!=null&&context.Request.AcceptTypes[0]=="application/json","transport accept "+i);

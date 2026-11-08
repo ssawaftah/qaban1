@@ -13,7 +13,7 @@ namespace WeighbridgeBridge {
  public static class ApiTransport {
   public static async Task<ApiReply> SendAsync(string endpoint,string json,string bearer,int timeoutMs,Action<HttpWebRequest> onRequest,Action onWritten=null) {
    var request=(HttpWebRequest)WebRequest.Create(endpoint);
-   request.Method="POST";request.AllowAutoRedirect=false;request.ContentType="application/json";request.Accept="application/json";request.KeepAlive=false;
+   request.UserAgent="QabanAlGhad/0.9";request.Method="POST";request.AllowAutoRedirect=false;request.ContentType="application/json";request.Accept="application/json";request.KeepAlive=false;
    ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;request.ServicePoint.Expect100Continue=true;
    if(!string.IsNullOrWhiteSpace(bearer))request.Headers[HttpRequestHeader.Authorization]="Bearer "+bearer.Trim();
    byte[] bytes=Encoding.UTF8.GetBytes(json);request.ContentLength=bytes.Length;if(onRequest!=null)onRequest(request);
