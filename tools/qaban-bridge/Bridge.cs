@@ -16,7 +16,7 @@ using System.Collections.Generic;
 [assembly: System.Reflection.AssemblyTitle("قبان الغد")]
 [assembly: System.Reflection.AssemblyProduct("قبان الغد")]
 [assembly: System.Reflection.AssemblyDescription("قبان الغد")]
-[assembly: System.Reflection.AssemblyVersion("0.9.1.0")]
+[assembly: System.Reflection.AssemblyVersion("0.9.2.0")]
 
 namespace WeighbridgeBridge {
  public static class Protocol {
@@ -26,8 +26,8 @@ namespace WeighbridgeBridge {
    if(s.StartsWith("ST,GS,")) {
     s=s.Substring(6);
     if(s.StartsWith("1,") && s.IndexOf(',')>=0) s=s.Substring(2);
-   } else if(s.StartsWith("1,ST,")) s=s.Substring(5).Split(',')[0];
-   else if(s.StartsWith("ST,NT,")) s=s.Substring(6).Split(',')[0];
+   } else if(s.StartsWith("1,ST,")) s=s.Substring(5).Split(new char[]{','})[0];
+   else if(s.StartsWith("ST,NT,")) s=s.Substring(6).Split(new char[]{','})[0];
    else return false;
    s=Regex.Replace(s,@"\s*,?\s*kg\s*$","",RegexOptions.IgnoreCase).Trim();
    return Regex.IsMatch(s,@"^[+-]?\s*\d+(?:\.\d+)?$") &&
@@ -111,7 +111,7 @@ namespace WeighbridgeBridge {
    if(!running)return;
    long now=clock.ElapsedMilliseconds;
    if(serial==null && now>=nextOpen){try{serial=new SerialPort(settings.Port,settings.Baud,(Parity)Enum.Parse(typeof(Parity),settings.Parity),settings.DataBits,StopBits.One);serial.Handshake=Handshake.None;serial.DtrEnable=false;serial.RtsEnable=false;serial.Open();frames=new Frames();WriteLog("تم فتح منفذ الميزان.");serialState.Text="الميزان: متصل؛ بانتظار إطار كامل";}catch(Exception ex){CloseSerial();received=-1;nextOpen=now+3000;serialState.Text="الميزان: تعذر فتح المنفذ";WriteLog("فشل فتح المنفذ: "+ex.GetType().Name+". تأكدي من المنفذ وإغلاق البرنامج القديم.");}}
-   if(serial!=null){try{string part=serial.ReadExisting();if(part.Length>0){decimal w;string raw;if(frames.Push(part,out w,out raw)){latest=w;received=now;sampledAtUtc=DateTime.UtcNow;weight.Text=w.ToString(CultureInfo.InvariantCulture)+" kg";serialState.Text="الميزان: قراءة حديثة";}else if(raw.Length>0){received=-1;weight.Text="— kg";serialState.Text="الميزان: إطار غير مدعوم أو غير مستقر";WriteLog("إطار: "+Regex.Replace(raw,@"[^\x20-\x7e]","?").Substring(0,Math.Min(120,raw.Length)));}}}catch(Exception ex){WriteLog("انقطاع المنفذ: "+ex.GetType().Name);CloseSerial();received=-1;nextOpen=now+3000;}}
+   if(serial!=null){try{string part=serial.ReadExisting();if(part.Length>0){decimal w;string raw;if(frames.Push(part,out w,out raw)){latest=w;received=now;sampledAtUtc=DateTime.UtcNow;weight.Text=w.ToString(CultureInfo.InvariantCulture)+" kg";serialState.Text="الميزان: قراءة حديثة";}else if(raw.Length>0){received=-1;weight.Text="— kg";serialState.Text="الميزان: إطار غير مدعوم أو غير مستقر";WriteLog("إطار: "+Regex.Replace(raw,@"[^\x20-\x7e]","?").Substring(0,Math.Min(120,raw.Length)));}}}catch(MissingMethodException ex){StopReading();serialState.Text="الميزان: تعذر معالجة القراءة";WriteLog("خطأ توافق البرنامج: "+ex.Message);}catch(Exception ex){WriteLog("خطأ أثناء القراءة: "+ex.GetType().Name+": "+ex.Message);CloseSerial();received=-1;nextOpen=now+3000;}}
    bool recent=ReadingPolicy.IsFresh(now,received,settings.Freshness);
    age.Text=received<0?"لا توجد قراءة صالحة":("عمر القراءة: "+((now-received)/1000.0).ToString("0.0")+" ثانية");
    if(!recent){weight.Text="— kg";if(received>=0)serialState.Text="الميزان: توقفت القراءات";if(enableSend.Checked&&!primary.Busy)httpState.Text="الإرسال: متوقف حتى تصل قراءة حديثة";}

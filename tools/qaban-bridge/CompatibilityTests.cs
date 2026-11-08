@@ -12,8 +12,20 @@ namespace WeighbridgeBridge {
  public static class CompatibilityTests {
   static int count;
   static void Check(bool result,string name){if(!result)throw new Exception("FAIL: "+name);count++;}
+  static bool UsesFrameworkSplit(){
+   var method=typeof(Protocol).GetMethod("Parse");var il=method.GetMethodBody().GetILAsByteArray();int calls=0;
+   for(int i=0;i<il.Length-4;i++){
+    if(il[i]!=0x28&&il[i]!=0x6f)continue;
+    System.Reflection.MethodBase target;
+    try{target=method.Module.ResolveMethod(BitConverter.ToInt32(il,i+1));}catch{continue;}
+    if(target.DeclaringType!=typeof(string)||target.Name!="Split")continue;
+    var parameters=target.GetParameters();if(parameters.Length!=1||parameters[0].ParameterType!=typeof(char[]))return false;calls++;
+   }
+   return calls==2;
+  }
   public static void Run(){
    count=0;decimal weight;string raw;
+   Check(UsesFrameworkSplit(),"compiled parser uses Framework-compatible Split(char[])");
    string[] valid={"ST,GS,+000120kg","ST,GS,-000020kg","ST,GS,1,+120kg","1,ST,120,kg","ST,NT,120,kg","ST,GS,   +120.50 kg"};
    decimal[] expected={120,-20,120,120,120,120.50m};
    for(int i=0;i<valid.Length;i++)Check(Protocol.Parse(valid[i],out weight)&&weight==expected[i],"legacy format "+i);
