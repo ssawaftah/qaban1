@@ -13,3 +13,4 @@ dist/
 tools/qaban-bridge/*.exe
 tools/qaban-bridge/settings.json
 tools/qaban-bridge/*token*
+tools/qaban-bridge/Returns.setup.json

@@ -9,6 +9,7 @@ const env={DB,SCALE_API_TOKEN:'local-test-token-not-for-production-123',ADMIN_US
 const send=(value,options={})=>onRequest({request:new Request('https://example.test/api/scale/weight',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+env.SCALE_API_TOKEN,...options.headers},body:typeof value==='string'?value:JSON.stringify(value)}),env:options.env??env,next:async()=>new Response('app')});
 assert.equal((await send({weightKg:0},{env:{...env,SCALE_API_TOKEN:undefined}})).status,503);
 assert.equal((await send({weightKg:0},{headers:{authorization:'Bearer wrong'}})).status,401);
+assert.equal((await send({weightKg:-1},{env:{...env,SCALE_API_TOKEN:undefined,SCALE_BRIDGE_TOKEN:env.SCALE_API_TOKEN}})).status,400,'dedicated bridge key authenticates without a production write');
 assert.equal((await send({weightKg:0},{headers:{Origin:'https://other.test'}})).status,403);
 assert.equal((await send({weightKg:0},{headers:{'content-type':'text/plain'}})).status,415);
 assert.equal((await send('x'.repeat(4097))).status,413);

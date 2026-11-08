@@ -77,7 +77,9 @@ namespace WeighbridgeBridge {
    primary=new OutputChannel(OutputKind.Primary,"الأساسي",()=>clock.ElapsedMilliseconds,WriteLog,SaveReply);
    returns=new OutputChannel(OutputKind.Returns,"المرتجعات",()=>clock.ElapsedMilliseconds,WriteLog,SaveReply);
    BuildInterface();
-   settings=LoadSettings();Apply(settings);
+   settings=LoadSettings();
+   try{if(Bootstrap.Import(Application.StartupPath,Path.Combine(dataDir,"settings.json"),settings))WriteLog("تم تجهيز ربط المرتجعات.");}catch(Exception ex){WriteLog("تعذر استيراد ربط المرتجعات: "+ex.GetType().Name);}
+   Apply(settings);
    start.Click+=(s,e)=>StartReading();stop.Click+=(s,e)=>StopReading();
    save.Click+=(s,e)=>{try{var cfg=ReadSettings();Directory.CreateDirectory(dataDir);File.WriteAllText(Path.Combine(dataDir,"settings.json"),new JavaScriptSerializer().Serialize(cfg),Encoding.UTF8);WriteLog("تم حفظ الإعدادات؛ رموز الربط مشفرة لحساب Windows الحالي.");}catch(Exception ex){MessageBox.Show(ex.Message);}};
    poll.Interval=100;poll.Tick+=(s,e)=>{Tick(s,e);RefreshInterface();};poll.Start();FormClosing+=(s,e)=>{StopReading();poll.Stop();};

@@ -72,6 +72,18 @@ namespace WeighbridgeBridge {
    Check(ResponseRules.ExplicitFailure("{\"accepted\":false}"),"accepted false surfaced as error");
    string protectedToken=LocalSecrets.Protect("test-only-local-token");Check(protectedToken!="test-only-local-token"&&LocalSecrets.Unprotect(protectedToken)=="test-only-local-token","credential protected roundtrip");
    Check(LocalSecrets.Unprotect("invalid-protected-value")=="","broken credential fails closed");
+   string temp=Path.Combine(Path.GetTempPath(),"qaban-bootstrap-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(temp);
+   try{
+    string secret="local-bootstrap-test-key-not-production";
+    File.WriteAllText(Path.Combine(temp,"Returns.setup.json"),new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(new ReturnsSetup{Endpoint="https://qaban-113.pages.dev/api/scale/weight",Token=secret}));
+    var settings=new Settings{Endpoint="https://primary.example.test/api/weight",Company="3"};string destination=Path.Combine(temp,"profile","settings.json");
+    Check(Bootstrap.Import(temp,destination,settings),"optional private setup imported");
+    Check(!File.Exists(Path.Combine(temp,"Returns.setup.json")),"plaintext provisioning removed after import");
+    Check(settings.Endpoint=="https://primary.example.test/api/weight"&&settings.Company=="3","bootstrap preserves original destination");
+    Check(settings.ReturnsEnabled&&LocalSecrets.Unprotect(settings.ReturnsTokenProtected)==secret,"provisioned secret protected for local user");
+    Check(!File.ReadAllText(destination).Contains(secret),"settings never contain plaintext provisioning token");
+   }finally{Directory.Delete(temp,true);}
+
   }
  }
 }

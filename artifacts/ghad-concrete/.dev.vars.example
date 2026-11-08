@@ -4,3 +4,5 @@ ADMIN_PASSWORD=
 APP_BASE_PATH=
 
 SCALE_API_TOKEN=
+# Optional dedicated bridge credential; keep production values in Pages secrets.
+SCALE_BRIDGE_TOKEN=

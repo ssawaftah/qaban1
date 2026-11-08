@@ -8,11 +8,11 @@ if not exist "%BRIDGE_CSC%" (
  pause
  exit /b 1
 )
-"%BRIDGE_CSC%" /nologo /codepage:65001 /target:exe /out:Bridge.Tests.exe /reference:System.Windows.Forms.dll /reference:System.Security.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll Bridge.cs Interface.cs ResponseRules.cs ApiTransport.cs OutputChannel.cs LocalSecrets.cs DualDeliveryTests.cs CompatibilityTests.cs
+"%BRIDGE_CSC%" /nologo /codepage:65001 /target:exe /out:Bridge.Tests.exe /reference:System.Windows.Forms.dll /reference:System.Security.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll Bridge.cs Interface.cs ResponseRules.cs ApiTransport.cs OutputChannel.cs LocalSecrets.cs Bootstrap.cs DualDeliveryTests.cs CompatibilityTests.cs
 if errorlevel 1 goto failed
 Bridge.Tests.exe --self-test
 if errorlevel 1 goto failed
-"%BRIDGE_CSC%" /nologo /codepage:65001 /target:winexe /win32icon:QabanAlGhad.ico /out:QabanAlGhad.exe /reference:System.Windows.Forms.dll /reference:System.Security.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll Bridge.cs Interface.cs ResponseRules.cs ApiTransport.cs OutputChannel.cs LocalSecrets.cs DualDeliveryTests.cs CompatibilityTests.cs
+"%BRIDGE_CSC%" /nologo /codepage:65001 /target:winexe /win32icon:QabanAlGhad.ico /out:QabanAlGhad.exe /reference:System.Windows.Forms.dll /reference:System.Security.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll Bridge.cs Interface.cs ResponseRules.cs ApiTransport.cs OutputChannel.cs LocalSecrets.cs Bootstrap.cs DualDeliveryTests.cs CompatibilityTests.cs
 if errorlevel 1 goto failed
 start "" QabanAlGhad.exe
 exit /b 0

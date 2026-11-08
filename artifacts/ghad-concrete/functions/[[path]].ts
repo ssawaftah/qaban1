@@ -44,6 +44,7 @@ interface Env {
   ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
   SCALE_API_TOKEN?: string;
+  SCALE_BRIDGE_TOKEN?: string;
 }
 
 interface PagesContext {
@@ -701,11 +702,13 @@ async function summary(db: D1Database): Promise<Response> {
 }
 
 async function handleScaleWrite(context: PagesContext): Promise<Response> {
-  const expected = context.env.SCALE_API_TOKEN;
-  if (!expected || expected.length < 24) return json({ error: "Scale integration is not configured." }, 503);
+  const allowed = [context.env.SCALE_API_TOKEN, context.env.SCALE_BRIDGE_TOKEN].filter((value): value is string => typeof value === "string" && value.length >= 24);
+  if (allowed.length === 0) return json({ error: "Scale integration is not configured." }, 503);
   const authorization = context.request.headers.get("authorization") ?? "";
   const provided = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  if (!provided || !(await constantTimeTextEqual(provided, expected))) return json({ error: "Unauthorized." }, 401);
+  if (!provided) return json({ error: "Unauthorized." }, 401);
+  const matches = await Promise.all(allowed.map((expected) => constantTimeTextEqual(provided, expected)));
+  if (!matches.some(Boolean)) return json({ error: "Unauthorized." }, 401);
   if (!context.request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return json({ error: "Expected application/json." }, 415);
   }
