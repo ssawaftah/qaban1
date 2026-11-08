@@ -1,0 +1,51 @@
+name: Scale integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  returns-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: artifacts/ghad-concrete
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install -g pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+  windows-bridge:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/qaban-bridge
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test Windows bridge
+        run: |
+          $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          $sources = (Get-ChildItem *.cs).FullName
+          & $csc /nologo /codepage:65001 /target:exe /out:Bridge.Tests.exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.Security.dll $sources
+          if ($LASTEXITCODE -ne 0) { throw 'Test build failed' }
+          & .\Bridge.Tests.exe --self-test
+          if ($LASTEXITCODE -ne 0) { throw 'Protocol tests failed' }
+          & .\Bridge.Tests.exe --dual-test
+          if ($LASTEXITCODE -ne 0) { throw 'Independent delivery tests failed' }
+          & $csc /nologo /codepage:65001 /target:winexe /win32icon:QabanAlGhad.ico /out:QabanAlGhad.exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.Security.dll $sources
+          if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QabanAlGhad-Windows
+          path: |
+            tools/qaban-bridge/QabanAlGhad.exe
+            tools/qaban-bridge/QabanAlGhad.exe.config
+            tools/qaban-bridge/Start.cmd
+            tools/qaban-bridge/QabanAlGhad.ico

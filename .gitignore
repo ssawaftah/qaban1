@@ -8,3 +8,8 @@ dist/
 *.log
 .DS_Store
 !.dev.vars.example
+
+# Local Windows bridge build outputs and credentials
+tools/qaban-bridge/*.exe
+tools/qaban-bridge/settings.json
+tools/qaban-bridge/*token*

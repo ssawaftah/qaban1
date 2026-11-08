@@ -706,13 +706,44 @@ async function handleScaleWrite(context: PagesContext): Promise<Response> {
   const authorization = context.request.headers.get("authorization") ?? "";
   const provided = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!provided || !(await constantTimeTextEqual(provided, expected))) return json({ error: "Unauthorized." }, 401);
-  const body = await parseBody(context.request);
-  const weightKg = body ? asNumber(body.weightKg) : null;
-  if (weightKg === null || weightKg <= 0 || weightKg > 200000) return badRequest("Invalid weightKg.");
-  const timestamp = now();
-  await context.env.DB.prepare(
-    "INSERT INTO scale_latest (id, weight_kg, received_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET weight_kg = excluded.weight_kg, received_at = excluded.received_at"
+  if (!context.request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+    return json({ error: "Expected application/json." }, 415);
+  }
+  const reader = context.request.body?.getReader();
+  if (!reader) return badRequest("Invalid JSON body.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > 4096) { await reader.cancel(); return json({ error: "Scale payload too large." }, 413); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return badRequest("Invalid JSON body.");
+    body = parsed as Record<string, unknown>;
+  } catch { return badRequest("Invalid JSON body."); }
+  const weightKg = asNumber(body.weightKg);
+  // Empty weighbridge (zero) is a valid live reading, not an API failure.
+  if (weightKg === null || weightKg < 0 || weightKg > 200000) return badRequest("Invalid weightKg.");
+  let timestamp = now();
+  if (body.sampledAt !== undefined) {
+    if (typeof body.sampledAt !== "string") return badRequest("Invalid sampledAt.");
+    const sampled = Date.parse(body.sampledAt);
+    const age = Date.now() - sampled;
+    if (!Number.isFinite(sampled) || age > 15000 || age < -30000) return json({ error: "Stale or invalid scale sample." }, 422);
+    timestamp = new Date(sampled).toISOString();
+  }
+  const result = await context.env.DB.prepare(
+    "INSERT INTO scale_latest (id, weight_kg, received_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET weight_kg = excluded.weight_kg, received_at = excluded.received_at WHERE excluded.received_at >= scale_latest.received_at"
   ).bind(weightKg, timestamp).run();
+  if (result.meta?.changes === 0) return json({ error: "Out-of-order scale sample." }, 409);
   return json({ accepted: true, weightKg, receivedAt: timestamp });
 }
 
@@ -805,7 +836,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       return json({ status: "ok" });
     }
     if (pathname === "/api/scale/weight" && method === "POST") {
-      return handleScaleWrite(context);
+      return await handleScaleWrite(context);
     }
     if (pathname.startsWith("/api/auth/")) {
       return await handleAuth(context, pathname, basePath);

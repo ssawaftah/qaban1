@@ -1,0 +1,36 @@
+import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { onRequest } from '../functions/[[path]].ts';
+const sql = new DatabaseSync(':memory:');
+for (const file of fs.readdirSync('migrations').filter(x=>x.endsWith('.sql')).sort()) sql.exec(fs.readFileSync('migrations/'+file,'utf8'));
+const DB={prepare(query){let args=[];return {bind(...v){args=v;return this},async first(){return sql.prepare(query).get(...args)??null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:Number(r.changes)}}}}}};
+const env={DB,SCALE_API_TOKEN:'local-test-token-not-for-production-123',ADMIN_USERNAME:'admin-test',ADMIN_PASSWORD:'Only-for-local-tests-password'};
+const send=(value,options={})=>onRequest({request:new Request('https://example.test/api/scale/weight',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+env.SCALE_API_TOKEN,...options.headers},body:typeof value==='string'?value:JSON.stringify(value)}),env:options.env??env,next:async()=>new Response('app')});
+assert.equal((await send({weightKg:0},{env:{...env,SCALE_API_TOKEN:undefined}})).status,503);
+assert.equal((await send({weightKg:0},{headers:{authorization:'Bearer wrong'}})).status,401);
+assert.equal((await send({weightKg:0},{headers:{Origin:'https://other.test'}})).status,403);
+assert.equal((await send({weightKg:0},{headers:{'content-type':'text/plain'}})).status,415);
+assert.equal((await send('x'.repeat(4097))).status,413);
+assert.equal((await send('{')).status,400);
+for (const weightKg of [-1,200001,'120',null,true])assert.equal((await send({weightKg})).status,400);
+let reply=await send({weightKg:0});assert.equal(reply.status,200);assert.equal((await reply.json()).accepted,true);
+const realNow=Date.now;let time=realNow();Date.now=()=>time;
+try {
+ reply=await send({weightKg:16480,sampledAt:new Date(time).toISOString()});assert.equal(reply.status,200);
+ time+=1000;
+ reply=await send({weightKg:16480,sampledAt:new Date(time).toISOString()});assert.equal(reply.status,200,'unchanged weight refreshes timestamp');
+ let row=sql.prepare('SELECT * FROM scale_latest').get();assert.equal(row.weight_kg,16480);assert.equal(row.received_at,new Date(time).toISOString());
+ assert.equal((await send({weightKg:9,sampledAt:new Date(time-1000).toISOString()})).status,409);
+ assert.equal(sql.prepare('SELECT weight_kg FROM scale_latest').get().weight_kg,16480,'late request cannot overwrite newest');
+ assert.equal((await send({weightKg:9,sampledAt:new Date(time-16000).toISOString()})).status,422);
+ assert.equal((await send({weightKg:9,sampledAt:new Date(time+31000).toISOString()})).status,422);
+ assert.equal((await send({weightKg:9,sampledAt:'not-a-date'})).status,422);
+ assert.equal((await send({weightKg:9,sampledAt:123})).status,400);
+} finally {Date.now=realNow;}
+let r=await onRequest({request:new Request('https://example.test/api/scale/latest'),env,next:async()=>new Response('app')});assert.equal(r.status,401,'private reading requires login');
+r=await onRequest({request:new Request('https://example.test/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:env.ADMIN_USERNAME,password:env.ADMIN_PASSWORD})}),env,next:async()=>new Response('app')});
+assert.equal(r.status,200);const Cookie=r.headers.get('set-cookie').split(';')[0];
+r=await onRequest({request:new Request('https://example.test/api/scale/latest',{headers:{Cookie}}),env,next:async()=>new Response('app')});assert.equal(r.status,200);assert.equal((await r.json()).weightKg,16480);assert.equal(r.headers.get('cache-control'),'no-store');
+r=await send({weightKg:20},{env:{...env,DB:{prepare(){throw new Error('simulated database error')}}}});assert.equal(r.status,500);assert.match(r.headers.get('content-type'),/application\/json/);assert.ok((await r.json()).error,'database rejection caught by API');
+console.log('PASS: scale auth, zero, repeated readings, freshness, order, bounded payload, private read and database failures');

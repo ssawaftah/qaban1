@@ -1,22 +1,38 @@
-# Scale integration rollout (draft PR #4)
+# ربط قبان الغد بالنظامين
 
-This feature is **not deployed** and does not change the original ReadSerialToAPIN.exe.
+## عقد استقبال المرتجعات
 
-## Contract
-- POST /api/scale/weight, JSON `{"weightKg":12345}`
-- Header `Authorization: Bearer <SCALE_API_TOKEN>` (secret, >=24 characters).
-- GET /api/scale/latest requires an authenticated web session.
-- The UI button copies a reading into the editable gross-weight input only if its timestamp is within 15 seconds.
-- Original CirclesSoft endpoint must continue to receive its existing request independently.
+- `POST /api/scale/weight` و`Content-Type: application/json`.
+- `Authorization: Bearer <SCALE_API_TOKEN>`؛ الرمز سر موجود في Cloudflare Pages production، لا يُكتب في المستودع.
+- JSON: `{"weightKg":16480,"sampledAt":"2026-11-08T08:00:00.000Z"}`.
+- `weightKg` رقم من 0 إلى 200000، بما فيه الصفر. النص والعدد السالب غير مقبولين.
+- `sampledAt` اختياري للتوافق مع المرسلين السابقين. إذا وجد، يجب أن يكون وقتًا صالحًا لا يزيد عمره عن 15 ثانية ولا يسبق ساعة الخادم بأكثر من 30 ثانية في المستقبل. يحفظ `receivedAt` الوقت الموحّد للعينة في هذه الحالة، وإلا وقت استقبال الخادم.
+- الرد: `{"accepted":true,"weightKg":16480,"receivedAt":"..."}`.
+- تكرار الوزن نفسه مقبول ويحدّث وقت القراءة. طلب بعينة أقدم من المخزنة لا يستبدل الوزن الأحدث، ويعيد 409.
+- جسم الطلب محدود بـ4096 بايت. 401 للرمز الخاطئ، 503 عند غياب إعداد الرمز، 413 للحجم، 422 لوقت عينة منتهٍ أو غير صالح، و500 JSON عند تعذر الكتابة.
+- `GET /api/scale/latest` يتطلب جلسة مستخدم مسجل دخوله، ولا يُتاح وزن الشركة دون مصادقة. الرد لا يُخزّن مؤقتًا.
 
-## Required steps before production
-1. Run typecheck, tests and build on branch `feature/scale-dual-delivery`.
-2. Set `SCALE_API_TOKEN` in Cloudflare Pages production secrets; never commit or paste its value into the repository.
-3. Apply `migrations/0003_scale_latest.sql` to the **existing** D1 DB. Do not reset the database.
-4. Confirm an authenticated browser session can read `/api/scale/latest`, and unauthenticated clients cannot.
-5. Modify or rebuild the existing Windows application to send the same parsed weight to both endpoints, with independent timeouts, logging and retries. **Do not start a second process opening COM6 while the original owns it.**
-6. Verify actual scale units and parser behavior before sending any weight. Check weight updates, manual edits, stale readings, auth failure and network outage.
-7. Merge and deploy only after these checks.
+## برنامج Windows
 
-## Integration note
-The uploaded executable is a compiled .NET Framework 4.5.1 binary, not source code. Its current serial settings are COM6 / 9600 / parity 2 / 8 data bits / 1000ms. Do not replace its existing sending logic without confirming its framing and request behavior. A decompiler and Windows runtime testing are needed to produce a safe modified binary.
+المصدر داخل `tools/qaban-bridge/`. تطبيق واحد يفتح COM6 ويقرأ الميزان مرة واحدة. قناتان مستقلتان تستقبلان آخر إطار مستقر:
+
+1. الأساسي: يبقى عنوانه ورقم شركته من الإعدادات السابقة، وحقول JSON `company_id` و`weight_scale` كنص، مثل البرنامج الأصلي.
+2. المرتجعات: عنوانه الافتراضي `https://qaban-113.pages.dev/api/scale/weight` ورمز Bearer خاص به. JSON رقمي مع وقت العينة.
+
+لكل قناة حالة وطلب ومهلة وجدولة مستقلة. الهدف إرسال كل ثانية، بما فيه الوزن الثابت. لا تنتظر الأولى نجاح الثانية، ولا تتشارك القناتان رمزًا. لا توجد إعادة تشغيل لأوزان تاريخية أو طابور. الاستئناف يستخدم أحدث إطار صالح فقط. الإيقاف يلغي الطلبين ويحرر المنفذ. لا يمكن ضمان إلغاء طلب وصل للخادم قبل الإلغاء المحلي.
+
+في البرنامج: احتفظي بإعدادات الأساسي، وأدخلي `SCALE_API_TOKEN` الموجود لديكِ في «رمز المرتجعات»، ثم حفظ. تُشفّر الرموز محليًا باستخدام Windows DPAPI للحساب الحالي؛ لا تُحفظ كنص صريح ولا تُضمّن في المصدر أو الإصدار. نقل الإعدادات إلى حساب Windows آخر يتطلب إعادة إدخال الرموز. لا تضعي كلمة مرور الموقع بدل الرمز.
+
+## النشر والبيانات
+
+- مشروع Pages هو `qaban`، مستودع `ssawaftah/qaban1`، فرع الإنتاج `main`، ومسار البناء `artifacts/ghad-concrete`.
+- قاعدة D1 الحالية وربط `DB` لا يتغيران. هذا التحديث لا يعيد إنشاء قاعدة ولا يعدّل الأرشيف.
+- جدول `scale_latest` الموجود من `0003_scale_latest.sql` يكفي؛ لا يلزم ترحيل جديد للتحديث الحالي.
+- لا تتغير قيم `ADMIN_USERNAME` أو `ADMIN_PASSWORD` أو `SCALE_API_TOKEN` عند نشر الكود.
+- واجهة الويب تجلب الوزن بالزر إلى حقل قابل للتعديل؛ الإرسال الدوري يبقي القراءة حديثة أثناء ثبات الوزن.
+
+## التحقق
+
+`pnpm typecheck`, `pnpm test`, `pnpm build`. اختبارات SQLite المحلية تشمل الصفر والتكرار والتوقيت وترتيب العينات والمصادقة وخصوصية القراءة وأخطاء قاعدة البيانات، إضافة لفحوص الأرشيف والمصادقة السابقة.
+
+برنامج Windows يملك `--self-test`, `--integration-test`, `--dual-test`. اختبارات القناتين تستخدم HTTP محليًا ولا ترسل أوزانًا لنظام الشركة. يلزم اختبار القبول على كمبيوتر القبان بعد إدخال الرمز: تغير الوزن وثباته، تعطل كل موقع على حدة، إيقاف البرنامج، واستئنافه. ظهور «تم الإرسال» يعني كتابة جسم الطلب؛ خانة الرد المستقلة تعرض نجاح التحديث أو خطأ الخادم دون إخفائه.
