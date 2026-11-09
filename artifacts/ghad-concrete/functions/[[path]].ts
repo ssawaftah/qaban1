@@ -733,8 +733,9 @@ async function handleScaleWrite(context: PagesContext): Promise<Response> {
     body = parsed as Record<string, unknown>;
   } catch { return badRequest("Invalid JSON body."); }
   const weightKg = asNumber(body.weightKg);
-  // Empty weighbridge (zero) is a valid live reading, not an API failure.
-  if (weightKg === null || weightKg < 0 || weightKg > 200000) return badRequest("Invalid weightKg.");
+  // Preserve the signed live reading, including negative zero-offset readings.
+  // Operation creation keeps its separate positive-weight validation.
+  if (weightKg === null || weightKg < -200000 || weightKg > 200000) return badRequest("Invalid weightKg.");
   let timestamp = now();
   if (body.sampledAt !== undefined) {
     if (typeof body.sampledAt !== "string") return badRequest("Invalid sampledAt.");

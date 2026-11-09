@@ -9,12 +9,12 @@ const env={DB,SCALE_API_TOKEN:'local-test-token-not-for-production-123',ADMIN_US
 const send=(value,options={})=>onRequest({request:new Request('https://example.test/api/scale/weight',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+env.SCALE_API_TOKEN,...options.headers},body:typeof value==='string'?value:JSON.stringify(value)}),env:options.env??env,next:async()=>new Response('app')});
 assert.equal((await send({weightKg:0},{env:{...env,SCALE_API_TOKEN:undefined}})).status,503);
 assert.equal((await send({weightKg:0},{headers:{authorization:'Bearer wrong'}})).status,401);
-assert.equal((await send({weightKg:-1},{env:{...env,SCALE_API_TOKEN:undefined,SCALE_BRIDGE_TOKEN:env.SCALE_API_TOKEN}})).status,400,'dedicated bridge key authenticates without a production write');
+assert.equal((await send({weightKg:-200001},{env:{...env,SCALE_API_TOKEN:undefined,SCALE_BRIDGE_TOKEN:env.SCALE_API_TOKEN}})).status,400,'dedicated bridge key authenticates without a production write');
 assert.equal((await send({weightKg:0},{headers:{Origin:'https://other.test'}})).status,403);
 assert.equal((await send({weightKg:0},{headers:{'content-type':'text/plain'}})).status,415);
 assert.equal((await send('x'.repeat(4097))).status,413);
 assert.equal((await send('{')).status,400);
-for (const weightKg of [-1,200001,'120',null,true])assert.equal((await send({weightKg})).status,400);
+for (const weightKg of [-200001,200001,'120',null,true])assert.equal((await send({weightKg})).status,400);
 let reply=await send({weightKg:0});assert.equal(reply.status,200);assert.equal((await reply.json()).accepted,true);
 const realNow=Date.now;let time=realNow();Date.now=()=>time;
 try {
@@ -29,9 +29,14 @@ try {
  assert.equal((await send({weightKg:9,sampledAt:'not-a-date'})).status,422);
  assert.equal((await send({weightKg:9,sampledAt:123})).status,400);
 } finally {Date.now=realNow;}
+for (const weightKg of [-200000,-120,-0.5,0,200000,-120]) {
+ const response=await send({weightKg,sampledAt:new Date(++time).toISOString()});assert.equal(response.status,200,'signed live reading accepted');
+ const body=await response.json();assert.equal(body.accepted,true);assert.equal(body.weightKg,weightKg,'sign preserved in acknowledgment');
+ assert.equal(sql.prepare('SELECT weight_kg FROM scale_latest').get().weight_kg,weightKg,'sign preserved in storage');
+}
 let r=await onRequest({request:new Request('https://example.test/api/scale/latest'),env,next:async()=>new Response('app')});assert.equal(r.status,401,'private reading requires login');
 r=await onRequest({request:new Request('https://example.test/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:env.ADMIN_USERNAME,password:env.ADMIN_PASSWORD})}),env,next:async()=>new Response('app')});
 assert.equal(r.status,200);const Cookie=r.headers.get('set-cookie').split(';')[0];
-r=await onRequest({request:new Request('https://example.test/api/scale/latest',{headers:{Cookie}}),env,next:async()=>new Response('app')});assert.equal(r.status,200);assert.equal((await r.json()).weightKg,16480);assert.equal(r.headers.get('cache-control'),'no-store');
+r=await onRequest({request:new Request('https://example.test/api/scale/latest',{headers:{Cookie}}),env,next:async()=>new Response('app')});assert.equal(r.status,200);assert.equal((await r.json()).weightKg,-120);assert.equal(r.headers.get('cache-control'),'no-store');
 r=await send({weightKg:20},{env:{...env,DB:{prepare(){throw new Error('simulated database error')}}}});assert.equal(r.status,500);assert.match(r.headers.get('content-type'),/application\/json/);assert.ok((await r.json()).error,'database rejection caught by API');
-console.log('PASS: scale auth, zero, repeated readings, freshness, order, bounded payload, private read and database failures');
+console.log('PASS: scale auth, signed readings and bounds, zero, repeated readings, freshness, order, bounded payload, private read and database failures');
